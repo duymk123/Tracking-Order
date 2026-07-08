@@ -4,6 +4,7 @@ import com.example.trackingorder.common.StockStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import com.example.trackingorder.configmapper.CartItemMapper;
 import com.example.trackingorder.dto.request.AddToCartReq;
+import com.example.trackingorder.dto.request.UpdateCartReq;
 import com.example.trackingorder.dto.response.CartItemRes;
 import com.example.trackingorder.dto.response.CartRes;
 import com.example.trackingorder.entity.*;
@@ -130,6 +131,49 @@ public class CartServiceImpl implements CartService {
         }
 
         return getCurrentCart();
+
+    }
+
+    @Override
+    @Transactional
+    public CartRes updateCartItem(UpdateCartReq req) {
+        //lay ra user dang dang nhap
+        User user = authenticationFacade.getCurrentUser();
+
+        // lay cart cua user
+        Cart cart = cartRepo.findByUser(user).orElseThrow(
+                () -> new NotFoundException(HttpStatus.NOT_FOUND, "Cart not found"));
+
+        //lay productVariantId
+        ProductVariant productVariant = productVariantRepo.findById(req.getProductVariantId())
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Product Variant not found"));
+
+        //lay cartitem
+        CartItem cartItem = cartItemRepo.findByCartAndProductVariant(cart,productVariant)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, " CartItem not found"));
+
+        // check quantity - inventory
+        if(req.getQuantity() == 0){
+            cartItemRepo.delete(cartItem);
+            log.info("Removed: {}", productVariant.getId());
+        }
+        else{
+            Inventory inventory = productVariant.getInventory();
+            if (inventory == null) {
+                throw new NotFoundException(HttpStatus.NOT_FOUND, "Inventory not found");
+            }
+            if (req.getQuantity() > inventory.getQuantityInStock()) {
+                throw new BadRequestException(HttpStatus.BAD_REQUEST, "Not enough stock");
+            }
+
+            cartItem.setQuantity(req.getQuantity());
+            cartItemRepo.save(cartItem);
+            log.info("Update ProductVariant: {} to {}",productVariant.getId(),req.getQuantity());
+        }
+        return getCurrentCart();
+
 
     }
 }

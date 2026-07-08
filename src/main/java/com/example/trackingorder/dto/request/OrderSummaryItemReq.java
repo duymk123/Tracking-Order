@@ -10,11 +10,11 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UpdateCartReq {
-    @NotBlank(message = "variant is not empty")
+public class OrderSummaryItemReq {
+    @NotBlank(message = "required variantId")
     private String productVariantId;
 
-    @NotNull(message = "quantity is not empty")
-    @Min(value = 0, message = "quantity is greater or equal 0")
+    @NotNull(message = "quantity not null")
+    @Min(value = 1,message = "quantity greater or equal 1")
     private Integer quantity;
 }

@@ -1,5 +1,6 @@
 package com.example.trackingorder.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -11,17 +12,34 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @ControllerAdvice
-
+@Slf4j
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorRes> handleNotFoundException(NotFoundException exception) {
+        ErrorRes errorResponse = new ErrorRes(exception.getStatus().value(), exception.getMessage());
+
+        return new ResponseEntity<>(errorResponse, exception.getStatus());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorRes> handleBadRequestException(BadRequestException exception) {
+        ErrorRes errorResponse = new ErrorRes(exception.getStatus().value(), exception.getMessage());
+
+        return new ResponseEntity<>(errorResponse, exception.getStatus());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorRes> handleAllExceptions(Exception exception) {
 
-        String message = "Loi he thong, vui long thu lai sau";
-        int code = 500;
+        exception.printStackTrace();   // THÊM DÒNG NÀY
 
-        ErrorRes errorResponse = new ErrorRes(code, message);
+        log.error("Unhandled exception", exception);
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        ErrorRes errorResponse =
+                new ErrorRes(500, exception.getClass().getName());
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(errorResponse);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.trackingorder.controller;
 
 import com.example.trackingorder.dto.request.AddToCartReq;
+import com.example.trackingorder.dto.request.UpdateCartReq;
 import com.example.trackingorder.dto.response.CartRes;
 import com.example.trackingorder.service.CartService;
 import jakarta.validation.Valid;
@@ -31,6 +32,13 @@ public class CartController {
     @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<CartRes> addToCart(@Valid @RequestBody AddToCartReq req){
         CartRes cartRes = cartService.addToCart(req);
+        return ResponseEntity.ok(cartRes);
+    }
+
+    @PatchMapping("/items")
+    @PreAuthorize("hasRole('BUYER')")
+    public ResponseEntity<CartRes> updateCartItem(@Valid @RequestBody UpdateCartReq req){
+        CartRes cartRes = cartService.updateCartItem(req);
         return ResponseEntity.ok(cartRes);
     }
 

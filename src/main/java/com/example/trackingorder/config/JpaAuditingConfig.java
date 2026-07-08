@@ -3,6 +3,9 @@ package com.example.trackingorder.config;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -18,11 +21,20 @@ public class JpaAuditingConfig {
 
     @Bean
     public AuditorAware<String> auditorProvider() {
-        return new AuditorAware<String>() {
-            @Override
-            public Optional<String> getCurrentAuditor() {
-                return Optional.of(authenticationFacade.getCurrentUser().getUsername());
+
+        return () -> {
+
+            Authentication authentication =
+                    SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken) {
+                return Optional.empty();
             }
+
+            // Chỉ lấy username, KHÔNG query database
+            return Optional.of(authentication.getName());
         };
     }
 }
