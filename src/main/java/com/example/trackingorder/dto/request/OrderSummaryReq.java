@@ -1,5 +1,6 @@
 package com.example.trackingorder.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,7 +13,11 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+
 public class OrderSummaryReq {
+    @Valid
     @NotEmpty(message = "Items can not emtpty")
     private List<OrderSummaryItemReq> items;
+
+    private String couponCode;
 }

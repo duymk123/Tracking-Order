@@ -26,7 +26,6 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class CartServiceImpl implements CartService {
     private final CartRepo cartRepo;
@@ -36,6 +35,7 @@ public class CartServiceImpl implements CartService {
     private final ProductVariantRepo productVariantRepo;
 
     @Override
+    @Transactional(readOnly = true)
     public CartRes getCurrentCart() {
         // lay cart tu user login
         User user = authenticationFacade.getCurrentUser();
@@ -55,6 +55,7 @@ public class CartServiceImpl implements CartService {
         // convert entity
         List<CartItemRes> cartItemResList = cartItemMapper.toCartItemList(cartItems);
 
+        // hien thi INSTOCK/LIMITED/OUT OF STOCK
         for (CartItemRes items : cartItemResList) {
             Integer quantityInStock = items.getQuantityInStock();
             if (quantityInStock == null || quantityInStock == 0) {
@@ -66,9 +67,12 @@ public class CartServiceImpl implements CartService {
             }
         }
         log.info("Get Current Cart Successfull");
-        return CartRes.builder().items(cartItemResList).build();
+        return CartRes.builder()
+                .items(cartItemResList)
+                .build();
     }
 
+    @Transactional
     @Override
     public CartRes addToCart(AddToCartReq req) {
         // lay tu user
@@ -112,18 +116,11 @@ public class CartServiceImpl implements CartService {
                 throw new BadRequestException(HttpStatus.BAD_REQUEST, "Not enough stock");
             }
 
-            //tinh price cua variant
-            BigDecimal finalPrice =
-                    productVariant
-                            .getProduct()
-                            .getBasePrice()
-                            .add(productVariant.getPriceModifier());
 
             CartItem cartItem = CartItem.builder()
                     .cart(cart)
                     .productVariant(productVariant)
                     .quantity(req.getQuantity())
-                    .priceSnapshot(finalPrice)
                     .build();
             cartItemRepo.save(cartItem);
 

@@ -30,10 +30,6 @@ public class CartItem extends BaseEntity {
     @Column(name = "quantity")
     private Integer quantity;
 
-    @Column(name = "price_snapshot")
-    private BigDecimal priceSnapshot;
-
-
 
 
 }

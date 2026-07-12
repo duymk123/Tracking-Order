@@ -15,6 +15,7 @@ public class AuthenticationFacade {
     private final UserRepo userRepo;
 
     public User getCurrentUser() {
+        // Lay thong tin user dang dang nhap
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String username = authentication.getName();

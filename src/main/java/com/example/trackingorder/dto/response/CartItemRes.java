@@ -14,7 +14,7 @@ public class CartItemRes {
     private String productVariantId;
     private String productName;
     private String sku;
-    private BigDecimal unitPrice; // lấy từ CartItem.priceSnapshot
+    private BigDecimal price; // lấy từ CartItem.priceSnapshot
     private Integer quantity;
     private String stockStatus; // inventory
     private Integer quantityInStock;
