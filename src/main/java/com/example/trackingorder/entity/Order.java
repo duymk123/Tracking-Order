@@ -38,6 +38,7 @@ public class Order extends BaseEntity {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private OrderStatusEnum status;
 
@@ -53,6 +54,7 @@ public class Order extends BaseEntity {
     @Column(name = "grand_total")
     private BigDecimal grandTotal;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_type")
     private PaymentType paymentType;
 

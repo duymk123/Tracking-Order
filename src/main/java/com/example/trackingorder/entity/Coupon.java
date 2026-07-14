@@ -27,20 +27,20 @@ public class Coupon extends BaseEntity {
 
     @Column(name = "discount_type")
     @Enumerated(EnumType.STRING)
-    private DiscountTypeEnum discount_type;
+    private DiscountTypeEnum discountType;
 
     @Column(name = "discount_value")
-    private BigDecimal discount_value;
+    private BigDecimal discountValue;
 
     @Column(name = "min_order_value")
-    private BigDecimal min_order_values;
+    private BigDecimal minOrderValue;
 
     @Column(name = "max_usage")
-    private Integer max_usage;
+    private Integer maxUsage;
 
     @Column(name = "used_count")
-    private Integer used_count;
+    private Integer usedCount;
 
     @Column(name = "expired_at")
-    private Date expired_at;
+    private Date expiredAt;
 }

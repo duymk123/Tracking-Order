@@ -1,5 +1,7 @@
 package com.example.trackingorder.dto.request;
 
+import com.example.trackingorder.common.PaymentType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
@@ -12,6 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class PlaceOrderReq {
+    @Valid
     @NotEmpty(message = "required order summary")
     private List<OrderSummaryItemReq> items;
 
@@ -21,5 +24,5 @@ public class PlaceOrderReq {
     private String couponCode;
 
     @NotBlank
-    private String paymentMethodId;
+    private PaymentType paymentType;
 }

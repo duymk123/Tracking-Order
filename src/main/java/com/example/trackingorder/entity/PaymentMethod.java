@@ -22,7 +22,7 @@ public class PaymentMethod extends BaseEntity{
     @UuidGenerator
     private String id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order;
 

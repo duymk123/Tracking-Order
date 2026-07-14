@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface ProductVariantRepo extends JpaRepository<ProductVariant, String> {
 
     @Query("""
-    SELECT pv
+    SELECT DISTINCT pv
     FROM ProductVariant pv
     JOIN FETCH pv.product p
     LEFT JOIN FETCH pv.inventory i
