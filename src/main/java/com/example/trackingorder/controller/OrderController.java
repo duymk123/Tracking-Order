@@ -2,11 +2,9 @@ package com.example.trackingorder.controller;
 
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
-import com.example.trackingorder.dto.response.MyOrderRes;
-import com.example.trackingorder.dto.response.OrderDetailRes;
-import com.example.trackingorder.dto.response.OrderSummaryRes;
-import com.example.trackingorder.dto.response.PlaceOrderRes;
+import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.service.OrderService;
+import com.example.trackingorder.service.TrackingLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +21,7 @@ import java.util.List;
 
 public class OrderController {
     private final OrderService orderService;
+    private final TrackingLogService trackingLogService;
 
     @PostMapping("/summary")
     @PreAuthorize("hasRole('BUYER')")
@@ -47,9 +46,17 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     @PreAuthorize("hasRole('BUYER')")
-    public ResponseEntity<OrderDetailRes> getOrderDetail(@PathVariable("orderId") String orderId) {
+    public ResponseEntity<OrderDetailRes> getOrderDetail(@PathVariable String orderId) {
         OrderDetailRes orderDetailRes = orderService.getOderDetail(orderId);
         return ResponseEntity.ok(orderDetailRes);
+    }
+
+    @GetMapping("/{orderId}/tracking")
+    @PreAuthorize("hasRole('BUYER')")
+    public ResponseEntity<List<TrackingHistoryRes>> getTrackingHistory(@PathVariable String orderId) {
+        List<TrackingHistoryRes> trackingHistoryRes = trackingLogService.getTrackingHistory(orderId);
+        return ResponseEntity.ok(trackingHistoryRes);
+
     }
 
 }

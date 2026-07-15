@@ -43,4 +43,7 @@ public class TrackingLog extends BaseEntity {
 
     @Column(name = "timestamp")
     private Timestamp timestamp;
+
+    @Column(name = "title")
+    private String title;
 }

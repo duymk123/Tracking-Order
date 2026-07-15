@@ -32,4 +32,6 @@ public interface OrderRepo extends JpaRepository<Order, String> {
     Optional<Order> findOrderDetail(
             @Param("orderId") String orderId,
             @Param("user") User user);
+
+    Optional<Order> findByIdAndUser(String orderId, User user);
 }

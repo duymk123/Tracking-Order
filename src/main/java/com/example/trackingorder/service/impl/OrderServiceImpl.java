@@ -27,7 +27,6 @@ import java.sql.Timestamp;
 import java.util.*;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 @Slf4j
 public class OrderServiceImpl implements OrderService {
@@ -116,6 +115,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OrderSummaryRes getOrderSummary(OrderSummaryReq req) {
 
         // Mapping productVariantId -> quantity
@@ -251,7 +251,8 @@ public class OrderServiceImpl implements OrderService {
         trackingLog.setUpdateBy(user);
         trackingLog.setFromStatus(null);
         trackingLog.setToStatus(OrderStatusEnum.PENDING.name());
-        trackingLog.setNote("Order Placed Successfully");
+        trackingLog.setTitle("Order Placed");
+        trackingLog.setNote("Customer placed the order successfully");
         trackingLog.setLocationDescription("System");
         trackingLog.setTimestamp(new Timestamp(System.currentTimeMillis()));
 
