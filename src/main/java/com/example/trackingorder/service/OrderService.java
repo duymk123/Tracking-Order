@@ -2,10 +2,7 @@ package com.example.trackingorder.service;
 
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
-import com.example.trackingorder.dto.response.MyOrderRes;
-import com.example.trackingorder.dto.response.OrderDetailRes;
-import com.example.trackingorder.dto.response.OrderSummaryRes;
-import com.example.trackingorder.dto.response.PlaceOrderRes;
+import com.example.trackingorder.dto.response.*;
 
 import java.util.List;
 
@@ -21,4 +18,7 @@ public interface OrderService {
 
     // xem chi tiet don hang
     OrderDetailRes getOderDetail(String orderId);
+
+    // admin confirm đơn hàng
+    ConfirmOrderRes confirmOrder(String orderId);
 }

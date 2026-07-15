@@ -6,10 +6,7 @@ import com.example.trackingorder.configmapper.OrderMapper;
 import com.example.trackingorder.dto.request.OrderSummaryItemReq;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
-import com.example.trackingorder.dto.response.MyOrderRes;
-import com.example.trackingorder.dto.response.OrderDetailRes;
-import com.example.trackingorder.dto.response.OrderSummaryRes;
-import com.example.trackingorder.dto.response.PlaceOrderRes;
+import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.entity.*;
 import com.example.trackingorder.exception.BadRequestException;
 import com.example.trackingorder.exception.NotFoundException;
@@ -113,6 +110,29 @@ public class OrderServiceImpl implements OrderService {
 
         return subtotal;
     }
+
+    // create TrackingLog
+    private void createTrackingLog(Order order,
+                                   User updateBy,
+                                   OrderStatusEnum fromStatus,
+                                   OrderStatusEnum toStatus,
+                                   String title,
+                                   String note,
+                                   String location) {
+
+        TrackingLog trackingLog = new TrackingLog();
+
+        trackingLog.setOrder(order);
+        trackingLog.setUpdateBy(updateBy);
+        trackingLog.setFromStatus(fromStatus == null ? null : fromStatus.name());
+        trackingLog.setToStatus(toStatus.name());
+        trackingLog.setTitle(title);
+        trackingLog.setNote(note);
+        trackingLog.setLocationDescription(location);
+
+        trackingLogRepo.save(trackingLog);
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -245,18 +265,28 @@ public class OrderServiceImpl implements OrderService {
 
         cartItemRepo.deleteAll(cartItems);
 
-        // ghi lai tracking log
-        TrackingLog trackingLog = new TrackingLog();
-        trackingLog.setOrder(order);
-        trackingLog.setUpdateBy(user);
-        trackingLog.setFromStatus(null);
-        trackingLog.setToStatus(OrderStatusEnum.PENDING.name());
-        trackingLog.setTitle("Order Placed");
-        trackingLog.setNote("Customer placed the order successfully");
-        trackingLog.setLocationDescription("System");
-        trackingLog.setTimestamp(new Timestamp(System.currentTimeMillis()));
+//        // ghi lai tracking log
+//        TrackingLog trackingLog = new TrackingLog();
+//        trackingLog.setOrder(order);
+//        trackingLog.setUpdateBy(user);
+//        trackingLog.setFromStatus(null);
+//        trackingLog.setToStatus(OrderStatusEnum.PENDING.name());
+//        trackingLog.setTitle("Order Placed");
+//        trackingLog.setNote("Customer placed the order successfully");
+//        trackingLog.setLocationDescription("System");
+//        trackingLog.setTimestamp(new Timestamp(System.currentTimeMillis()));
+//
+//        trackingLogRepo.save(trackingLog);
 
-        trackingLogRepo.save(trackingLog);
+        createTrackingLog(
+                order,
+                user,
+                null,
+                OrderStatusEnum.PENDING,
+                "Order Placed",
+                "Customer placed the order successfully",
+                "System"
+        );
 
         return PlaceOrderRes.builder()
                 .orderId(order.getId())
@@ -293,6 +323,52 @@ public class OrderServiceImpl implements OrderService {
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
         return orderMapper.toOrderDetailRes(order);
+    }
+
+    @Override
+    public ConfirmOrderRes confirmOrder(String orderId) {
+        // Lấy admin đang đăng nhập
+        User admin = authenticationFacade.getCurrentUser();
+
+        // Tìm đơn hàng
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order Not Found"));
+
+        // Chỉ xác nhận đơn đang ở trạng thái PENDING
+        if (order.getStatus() != OrderStatusEnum.PENDING) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only pending orders can be confirmed");
+        }
+
+        // Lưu trạng thái cũ để ghi tracking log
+        OrderStatusEnum oldStatus = order.getStatus();
+
+        // Cập nhật trạng thái
+        order.setStatus(OrderStatusEnum.CONFIRMED);
+
+        // Lưu Order
+        orderRepo.save(order);
+
+        // Ghi lịch sử tracking
+        createTrackingLog(
+                order,
+                admin,
+                oldStatus,
+                OrderStatusEnum.CONFIRMED,
+                "Order Confirmed",
+                "Warehouse confirmed the order.",
+                "Warehouse"
+        );
+
+        return ConfirmOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Order confirmed successfully")
+                .build();
     }
 
 }

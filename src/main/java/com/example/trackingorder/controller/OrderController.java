@@ -59,4 +59,10 @@ public class OrderController {
 
     }
 
+    @PatchMapping("/{orderId}/comfirm")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ConfirmOrderRes> confirmOrder(@PathVariable String orderId) {
+        ConfirmOrderRes confirmOrderRes = orderService.confirmOrder(orderId);
+        return ResponseEntity.ok(confirmOrderRes);
+    }
 }
