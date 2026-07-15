@@ -2,9 +2,12 @@ package com.example.trackingorder.service.impl;
 
 import com.example.trackingorder.common.OrderStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
+import com.example.trackingorder.configmapper.OrderMapper;
 import com.example.trackingorder.dto.request.OrderSummaryItemReq;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
+import com.example.trackingorder.dto.response.MyOrderRes;
+import com.example.trackingorder.dto.response.OrderDetailRes;
 import com.example.trackingorder.dto.response.OrderSummaryRes;
 import com.example.trackingorder.dto.response.PlaceOrderRes;
 import com.example.trackingorder.entity.*;
@@ -39,6 +42,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartItemRepo cartItemRepo;
     private final InventoryRepo inventoryRepo;
     private final CartRepo cartRepo;
+    private final OrderMapper orderMapper;
 
     // mapping quantity -> variants
     private Map<String, Integer> getQuantityMap(List<OrderSummaryItemReq> items) {
@@ -148,6 +152,7 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
+    @Transactional
     @Override
     public PlaceOrderRes placeOrder(PlaceOrderReq req) {
         //get user login
@@ -259,6 +264,34 @@ public class OrderServiceImpl implements OrderService {
                 .grandTotal(order.getGrandTotal())
                 .message("Place order successfully")
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MyOrderRes> getMyOrders() {
+
+        User user = authenticationFacade.getCurrentUser();
+
+        // lay toan bo don hang cua user
+        List<Order> orders = orderRepo.findAllByUser(user);
+
+        //Mapper
+        return orderMapper.toMyOrderResList(orders);
+
+
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderDetailRes getOderDetail(String orderId) {
+        User user = authenticationFacade.getCurrentUser();
+
+        // Tim don hang cua user
+        Order order = orderRepo.findOrderDetail(orderId, user)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        return orderMapper.toOrderDetailRes(order);
     }
 
 }

@@ -4,6 +4,7 @@ import com.example.trackingorder.common.PaymentType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.List;
@@ -23,6 +24,6 @@ public class PlaceOrderReq {
 
     private String couponCode;
 
-    @NotBlank
+    @NotNull(message = "paymentType is required")
     private PaymentType paymentType;
 }

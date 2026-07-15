@@ -11,6 +11,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Getter
@@ -60,5 +61,8 @@ public class Order extends BaseEntity {
 
     @Column(name = "estimated_delivery_date")
     private Date estimatedDeliveryDate;
+
+    @OneToMany(mappedBy = "order")
+    private List<OrderItem> orderItems;
 
 }
