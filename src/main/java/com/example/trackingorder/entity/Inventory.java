@@ -32,4 +32,8 @@ public class Inventory extends BaseEntity{
     @Column(name = "warehouse_location")
     private String warehouseLocation;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
 }
