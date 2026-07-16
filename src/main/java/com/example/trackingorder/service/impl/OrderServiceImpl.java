@@ -64,6 +64,18 @@ public class OrderServiceImpl implements OrderService {
         return productVariantRepo.findAllByIds(variantIds);
     }
 
+    private List<ProductVariant> loadProductVariantsForUpdate(
+            List<OrderSummaryItemReq> items) {
+
+        List<String> variantIds = new ArrayList<>();
+
+        for (OrderSummaryItemReq item : items) {
+            variantIds.add(item.getProductVariantId());
+        }
+
+        return productVariantRepo.findAllByIdsForUpdate(variantIds);
+    }
+
     // check Inventory
     private void validateInventory(List<ProductVariant> productVariants,
                                    Map<String, Integer> quantityMap) {
@@ -188,7 +200,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Query product
         List<ProductVariant> productVariants =
-                loadProductVariants(req.getItems());
+                loadProductVariantsForUpdate(req.getItems());
 
         // validate inventory
         validateInventory(productVariants, quantityMap);
