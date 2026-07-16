@@ -339,16 +339,30 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public ConfirmOrderRes confirmOrder(String orderId) {
         // Lấy admin đang đăng nhập
-        User admin = authenticationFacade.getCurrentUser();
+        User seller = authenticationFacade.getCurrentUser();
 
         // Tìm đơn hàng
-        Order order = orderRepo.findById(orderId)
+        Order order = orderRepo.findDetailForSeller(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(
-                                HttpStatus.NOT_FOUND,
-                                "Order Not Found"));
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new BadRequestException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
+        }
 
         // Chỉ xác nhận đơn đang ở trạng thái PENDING
         if (order.getStatus() != OrderStatusEnum.PENDING) {
@@ -356,6 +370,7 @@ public class OrderServiceImpl implements OrderService {
                     HttpStatus.BAD_REQUEST,
                     "Only pending orders can be confirmed");
         }
+
 
         // Lưu trạng thái cũ để ghi tracking log
         OrderStatusEnum oldStatus = order.getStatus();
@@ -369,7 +384,7 @@ public class OrderServiceImpl implements OrderService {
         // Ghi lịch sử tracking
         createTrackingLog(
                 order,
-                admin,
+                seller,
                 oldStatus,
                 OrderStatusEnum.CONFIRMED,
                 "Order Confirmed",

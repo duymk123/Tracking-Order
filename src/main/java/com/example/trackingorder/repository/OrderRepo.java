@@ -33,5 +33,16 @@ public interface OrderRepo extends JpaRepository<Order, String> {
             @Param("orderId") String orderId,
             @Param("user") User user);
 
+    @Query("""
+            SELECT DISTINCT o
+            FROM Order o
+            JOIN FETCH o.orderItems oi
+            JOIN FETCH oi.productVariant pv
+            JOIN FETCH pv.product p
+            JOIN FETCH p.seller s
+            WHERE o.id = :orderId
+            """)
+    Optional<Order> findDetailForSeller(@Param("orderId") String orderId);
+
     Optional<Order> findByIdAndUser(String orderId, User user);
 }
