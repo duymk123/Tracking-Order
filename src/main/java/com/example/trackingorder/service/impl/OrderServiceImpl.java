@@ -16,6 +16,7 @@ import com.example.trackingorder.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -249,8 +250,21 @@ public class OrderServiceImpl implements OrderService {
             inventories.add(inventory);
 
         }
-        orderItemRepo.saveAll(orderItems);
-        inventoryRepo.saveAll(inventories);
+//        orderItemRepo.saveAll(orderItems);
+//        inventoryRepo.saveAll(inventories);
+        try {
+
+            orderItemRepo.saveAll(orderItems);
+
+            inventoryRepo.saveAll(inventories);
+
+        } catch (ObjectOptimisticLockingFailureException e) {
+
+            throw new BadRequestException(
+                    HttpStatus.CONFLICT,
+                    "Some products are no longer available. Please try again."
+            );
+        }
 
         // tang usedcount
         couponService.increaseUsedCount(req.getCouponCode());
