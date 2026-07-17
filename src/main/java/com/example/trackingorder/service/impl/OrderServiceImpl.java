@@ -45,6 +45,12 @@ public class OrderServiceImpl implements OrderService {
         Map<String, Integer> quantityMap = new HashMap<>();
 
         for (OrderSummaryItemReq item : items) {
+
+            //fix lỗi variant bị trùng trong request A:2, A:5 -> A :5
+            if(quantityMap.containsKey(item.getProductVariantId())){
+                throw new BadRequestException(HttpStatus.BAD_REQUEST,"Duplicate product variant id "+item.getProductVariantId());
+            }
+
             quantityMap.put(item.getProductVariantId(), item.getQuantity());
         }
 
@@ -62,6 +68,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return productVariantRepo.findAllByIds(variantIds);
+    }
+
+    // Kiểm tra variant tồn tại
+    private void validateProductVariantsExist(List<ProductVariant> productVariants,
+                                              Map<String, Integer> quantityMap) {
+        if (productVariants.size() != quantityMap.size()) {
+            throw new NotFoundException(
+                    HttpStatus.NOT_FOUND,
+                    "One or more product variants do not exist"
+            );
+        }
     }
 
     // check Inventory
@@ -143,6 +160,10 @@ public class OrderServiceImpl implements OrderService {
         // query 1 lan duy nhat
         List<ProductVariant> productVariants = loadProductVariants(req.getItems());
 
+        // vlidate variants
+        validateProductVariantsExist(productVariants, quantityMap);
+
+
         // ktra ton kho
         validateInventory(productVariants, quantityMap);
 
@@ -189,6 +210,9 @@ public class OrderServiceImpl implements OrderService {
         // Query product
         List<ProductVariant> productVariants =
                 loadProductVariants(req.getItems());
+
+        //validate variants
+        validateProductVariantsExist(productVariants, quantityMap);
 
         // validate inventory
         validateInventory(productVariants, quantityMap);
@@ -325,9 +349,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ConfirmOrderRes confirmOrder(String orderId) {
-        // Lấy admin đang đăng nhập
-        User admin = authenticationFacade.getCurrentUser();
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
 
         // Tìm đơn hàng
         Order order = orderRepo.findById(orderId)
@@ -355,7 +380,7 @@ public class OrderServiceImpl implements OrderService {
         // Ghi lịch sử tracking
         createTrackingLog(
                 order,
-                admin,
+                seller,
                 oldStatus,
                 OrderStatusEnum.CONFIRMED,
                 "Order Confirmed",
@@ -367,6 +392,44 @@ public class OrderServiceImpl implements OrderService {
                 .orderId(order.getId())
                 .status(order.getStatus())
                 .message("Order confirmed successfully")
+                .build();
+    }
+
+    @Override
+    public PickingOrderRes pickingOrder(String orderId) {
+        User seller = authenticationFacade.getCurrentUser();
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND,
+                                "Order Not Found"));
+
+        if (order.getStatus() != OrderStatusEnum.CONFIRMED) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only confirmed orders can be picked");
+        }
+
+        OrderStatusEnum oldStatus = order.getStatus();
+
+        order.setStatus(OrderStatusEnum.PICKING);
+
+        orderRepo.save(order);
+
+        createTrackingLog(
+                order,
+                seller,
+                oldStatus,
+                OrderStatusEnum.PICKING,
+                "Picking Order",
+                "Warehouse is preparing the package.",
+                "Warehouse"
+        );
+
+        return PickingOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Order is being prepared")
                 .build();
     }
 

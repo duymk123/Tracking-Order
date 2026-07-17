@@ -21,4 +21,6 @@ public interface OrderService {
 
     // admin confirm đơn hàng
     ConfirmOrderRes confirmOrder(String orderId);
+
+    PickingOrderRes pickingOrder(String orderId);
 }
