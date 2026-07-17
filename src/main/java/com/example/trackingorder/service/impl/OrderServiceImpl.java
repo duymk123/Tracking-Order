@@ -9,6 +9,7 @@ import com.example.trackingorder.dto.request.PlaceOrderReq;
 import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.entity.*;
 import com.example.trackingorder.exception.BadRequestException;
+import com.example.trackingorder.exception.ForbiddenException;
 import com.example.trackingorder.exception.NotFoundException;
 import com.example.trackingorder.repository.*;
 import com.example.trackingorder.service.CouponService;
@@ -32,7 +33,6 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepo orderRepo;
     private final OrderItemRepo orderItemRepo;
     private final UserAddressRepo userAddressRepo;
-    private final PaymentMethodRepo paymentMethodRepo;
     private final TrackingLogRepo trackingLogRepo;
     private final CartItemRepo cartItemRepo;
     private final InventoryRepo inventoryRepo;
@@ -47,8 +47,8 @@ public class OrderServiceImpl implements OrderService {
         for (OrderSummaryItemReq item : items) {
 
             //fix lỗi variant bị trùng trong request A:2, A:5 -> A :5
-            if(quantityMap.containsKey(item.getProductVariantId())){
-                throw new BadRequestException(HttpStatus.BAD_REQUEST,"Duplicate product variant id "+item.getProductVariantId());
+            if (quantityMap.containsKey(item.getProductVariantId())) {
+                throw new BadRequestException(HttpStatus.BAD_REQUEST, "Duplicate product variant id " + item.getProductVariantId());
             }
 
             quantityMap.put(item.getProductVariantId(), item.getQuantity());
@@ -147,6 +147,38 @@ public class OrderServiceImpl implements OrderService {
         trackingLog.setLocationDescription(location);
 
         trackingLogRepo.save(trackingLog);
+    }
+
+    // cập nhật trạng thái đơn hàng
+    private void updateOrderStatus(
+            Order order,
+            User updatedBy,
+            OrderStatusEnum expectedStatus,
+            OrderStatusEnum newStatus,
+            String title,
+            String note,
+            String location) {
+
+        // Validate trạng thái
+        if (order.getStatus() != expectedStatus) {
+            throw new BadRequestException(HttpStatus.BAD_REQUEST, String.format("Only %s orders can be changed to %s", expectedStatus, newStatus));
+        }
+
+        //Lưu trạng thái cũ
+        OrderStatusEnum oldStatus = order.getStatus();
+
+        //Update status
+        order.setStatus(newStatus);
+
+        createTrackingLog(
+                order,
+                updatedBy,
+                oldStatus,
+                newStatus,
+                title,
+                note,
+                location
+        );
     }
 
 
@@ -355,38 +387,35 @@ public class OrderServiceImpl implements OrderService {
         User seller = authenticationFacade.getCurrentUser();
 
         // Tìm đơn hàng
-        Order order = orderRepo.findById(orderId)
+        Order order = orderRepo.findDetailForSeller(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(
-                                HttpStatus.NOT_FOUND,
-                                "Order Not Found"));
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
-        // Chỉ xác nhận đơn đang ở trạng thái PENDING
-        if (order.getStatus() != OrderStatusEnum.PENDING) {
-            throw new BadRequestException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only pending orders can be confirmed");
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
         }
 
-        // Lưu trạng thái cũ để ghi tracking log
-        OrderStatusEnum oldStatus = order.getStatus();
-
-        // Cập nhật trạng thái
-        order.setStatus(OrderStatusEnum.CONFIRMED);
-
-        // Lưu Order
-        orderRepo.save(order);
-
-        // Ghi lịch sử tracking
-        createTrackingLog(
+        updateOrderStatus(
                 order,
                 seller,
-                oldStatus,
+                OrderStatusEnum.PENDING,
                 OrderStatusEnum.CONFIRMED,
                 "Order Confirmed",
                 "Warehouse confirmed the order.",
                 "Warehouse"
         );
+
 
         return ConfirmOrderRes.builder()
                 .orderId(order.getId())
@@ -396,30 +425,35 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public PickingOrderRes pickingOrder(String orderId) {
+        // Lấy seller đang đăng nhập
         User seller = authenticationFacade.getCurrentUser();
 
-        Order order = orderRepo.findById(orderId)
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND,
-                                "Order Not Found"));
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
-        if (order.getStatus() != OrderStatusEnum.CONFIRMED) {
-            throw new BadRequestException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only confirmed orders can be picked");
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
         }
 
-        OrderStatusEnum oldStatus = order.getStatus();
-
-        order.setStatus(OrderStatusEnum.PICKING);
-
-        orderRepo.save(order);
-
-        createTrackingLog(
+        updateOrderStatus(
                 order,
                 seller,
-                oldStatus,
+                OrderStatusEnum.CONFIRMED,
                 OrderStatusEnum.PICKING,
                 "Picking Order",
                 "Warehouse is preparing the package.",
@@ -433,5 +467,40 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
+    //shipping
+//    updateOrderStatus(
+//            order,
+//            seller,
+//            OrderStatusEnum.PICKING,
+//            OrderStatusEnum.SHIPPING,
+//            "Package Shipped",
+//            "Your package has been handed over to the carrier.",
+//            "Warehouse"
+//    );
+
+//    Delivered
+//
+//    updateOrderStatus(
+//            order,
+//            seller,
+//            OrderStatusEnum.SHIPPING,
+//            OrderStatusEnum.DELIVERED,
+//            "Delivered",
+//            "Package delivered successfully.",
+//            "Customer Address"
+//    );
+
+//    Returning
+//
+//    updateOrderStatus(
+//            order,
+//            seller,
+//            OrderStatusEnum.FAILED,
+//            OrderStatusEnum.RETURNING,
+//            "Returning",
+//            "Package is returning to warehouse.",
+//            "Warehouse"
 }
+
+
 
