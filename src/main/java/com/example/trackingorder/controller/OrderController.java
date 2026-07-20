@@ -87,10 +87,26 @@ public class OrderController {
         return ResponseEntity.ok(deliveredOrderRes);
     }
 
+    @PatchMapping("/{orderId}/fail")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<FailedOrderRes> failedOrder(@PathVariable String orderId) {
+        FailedOrderRes failedOrderRes = orderService.failedOrder(orderId);
+        return ResponseEntity.ok(failedOrderRes);
+    }
+
     @PatchMapping("/{orderId}/return")
     @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ReturningOrderRes> returningOrder(@PathVariable String orderId) {
         ReturningOrderRes returningOrderRes = orderService.returningOrder(orderId);
         return ResponseEntity.ok(returningOrderRes);
     }
+
+    @PatchMapping("/{orderId}/reattempt")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ReattemptOrderRes> reattemptOrder(@PathVariable String orderId) {
+        ReattemptOrderRes reattemptOrderRes = orderService.reattemptOrder(orderId);
+        return ResponseEntity.ok(reattemptOrderRes);
+    }
+
+
 }

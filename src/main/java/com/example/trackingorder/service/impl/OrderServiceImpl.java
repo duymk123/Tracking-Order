@@ -469,6 +469,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ShippingOrderRes shippingOrder(String orderId) {
         // Lấy seller đang đăng nhập
         User seller = authenticationFacade.getCurrentUser();
@@ -493,15 +494,30 @@ public class OrderServiceImpl implements OrderService {
                     "You are not allowed to confirm this order");
         }
 
-        updateOrderStatus(
-            order,
-            seller,
-            OrderStatusEnum.PICKING,
-            OrderStatusEnum.SHIPPING,
-            "Package Shipped",
-            "Your package has been handed over to the carrier.",
-            "Warehouse"
-    );
+        if (order.getStatus() != OrderStatusEnum.PICKING
+                && order.getStatus() != OrderStatusEnum.REATTEMPT) {
+
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only PICKING or REATTEMPT orders can be shipped");
+        }
+
+        OrderStatusEnum oldStatus = order.getStatus();
+
+        order.setStatus(OrderStatusEnum.SHIPPING);
+
+        orderRepo.save(order);
+
+        createTrackingLog(
+                order,
+                seller,
+                oldStatus,
+                OrderStatusEnum.SHIPPING,
+                "Package Shipped",
+                "Your package has been handed over to the carrier.",
+                "Warehouse"
+        );
+
         return ShippingOrderRes.builder()
                 .orderId(order.getId())
                 .status(order.getStatus())
@@ -511,6 +527,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public DeliveredOrderRes deliveredOrder(String orderId) {
         // Lấy seller đang đăng nhập
         User seller = authenticationFacade.getCurrentUser();
@@ -536,14 +553,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         updateOrderStatus(
-            order,
-            seller,
-            OrderStatusEnum.SHIPPING,
-            OrderStatusEnum.DELIVERED,
-            "Delivered",
-            "Package delivered successfully.",
-            "Customer Address"
-    );
+                order,
+                seller,
+                OrderStatusEnum.SHIPPING,
+                OrderStatusEnum.DELIVERED,
+                "Delivered",
+                "Package delivered successfully.",
+                "Customer Address"
+        );
         return DeliveredOrderRes.builder()
                 .orderId(order.getId())
                 .status(order.getStatus())
@@ -552,6 +569,35 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FailedOrderRes failedOrder(String orderId) {
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
+
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        updateOrderStatus(
+                order,
+                seller,
+                OrderStatusEnum.SHIPPING,
+                OrderStatusEnum.FAILED,
+                "Delivery Failed",
+                "Delivery attempt failed.",
+                "Customer Address"
+        );
+
+        return FailedOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Delivery failed")
+                .build();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public ReturningOrderRes returningOrder(String orderId) {
         // Lấy seller đang đăng nhập
         User seller = authenticationFacade.getCurrentUser();
@@ -589,6 +635,34 @@ public class OrderServiceImpl implements OrderService {
                 .orderId(order.getId())
                 .status(order.getStatus())
                 .message("Order returned successfully")
+                .build();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReattemptOrderRes reattemptOrder(String orderId) {
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
+
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        updateOrderStatus(
+                order,
+                seller,
+                OrderStatusEnum.FAILED,
+                OrderStatusEnum.REATTEMPT,
+                "Delivery Reattempt",
+                "Delivery has been rescheduled.",
+                "Delivery Hub"
+        );
+
+        return ReattemptOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Delivery reattempt scheduled")
                 .build();
     }
 

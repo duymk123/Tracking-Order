@@ -19,7 +19,7 @@ public interface OrderService {
     // xem chi tiet don hang
     OrderDetailRes getOderDetail(String orderId);
 
-    // admin confirm đơn hàng
+    // Field admin manage Order
     ConfirmOrderRes confirmOrder(String orderId);
 
     PickingOrderRes pickingOrder(String orderId);
@@ -28,6 +28,10 @@ public interface OrderService {
 
     DeliveredOrderRes deliveredOrder(String orderId);
 
+    FailedOrderRes failedOrder(String orderId);
+
     ReturningOrderRes returningOrder(String orderId);
+
+    ReattemptOrderRes reattemptOrder(String orderId);
 
 }
