@@ -23,4 +23,11 @@ public interface OrderService {
     ConfirmOrderRes confirmOrder(String orderId);
 
     PickingOrderRes pickingOrder(String orderId);
+
+    ShippingOrderRes shippingOrder(String orderId);
+
+    DeliveredOrderRes deliveredOrder(String orderId);
+
+    ReturningOrderRes returningOrder(String orderId);
+
 }

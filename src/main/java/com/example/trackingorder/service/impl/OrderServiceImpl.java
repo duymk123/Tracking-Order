@@ -450,6 +450,7 @@ public class OrderServiceImpl implements OrderService {
                     "You are not allowed to confirm this order");
         }
 
+
         updateOrderStatus(
                 order,
                 seller,
@@ -467,39 +468,130 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    //shipping
-//    updateOrderStatus(
-//            order,
-//            seller,
-//            OrderStatusEnum.PICKING,
-//            OrderStatusEnum.SHIPPING,
-//            "Package Shipped",
-//            "Your package has been handed over to the carrier.",
-//            "Warehouse"
-//    );
+    @Override
+    public ShippingOrderRes shippingOrder(String orderId) {
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
 
-//    Delivered
-//
-//    updateOrderStatus(
-//            order,
-//            seller,
-//            OrderStatusEnum.SHIPPING,
-//            OrderStatusEnum.DELIVERED,
-//            "Delivered",
-//            "Package delivered successfully.",
-//            "Customer Address"
-//    );
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
-//    Returning
-//
-//    updateOrderStatus(
-//            order,
-//            seller,
-//            OrderStatusEnum.FAILED,
-//            OrderStatusEnum.RETURNING,
-//            "Returning",
-//            "Package is returning to warehouse.",
-//            "Warehouse"
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
+        }
+
+        updateOrderStatus(
+            order,
+            seller,
+            OrderStatusEnum.PICKING,
+            OrderStatusEnum.SHIPPING,
+            "Package Shipped",
+            "Your package has been handed over to the carrier.",
+            "Warehouse"
+    );
+        return ShippingOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Order shipped successfully")
+                .build();
+
+    }
+
+    @Override
+    public DeliveredOrderRes deliveredOrder(String orderId) {
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
+
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
+        }
+
+        updateOrderStatus(
+            order,
+            seller,
+            OrderStatusEnum.SHIPPING,
+            OrderStatusEnum.DELIVERED,
+            "Delivered",
+            "Package delivered successfully.",
+            "Customer Address"
+    );
+        return DeliveredOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Order delivered successfully")
+                .build();
+    }
+
+    @Override
+    public ReturningOrderRes returningOrder(String orderId) {
+        // Lấy seller đang đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
+
+        // Tìm đơn hàng
+        Order order = orderRepo.findDetailForSeller(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
+        }
+
+
+        updateOrderStatus(
+                order,
+                seller,
+                OrderStatusEnum.FAILED,
+                OrderStatusEnum.RETURNING,
+                "Returning",
+                "Package is returning to warehouse.",
+                "Warehouse");
+        return ReturningOrderRes.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .message("Order returned successfully")
+                .build();
+    }
+
 }
 
 

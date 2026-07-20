@@ -59,10 +59,38 @@ public class OrderController {
 
     }
 
-    @PatchMapping("/{orderId}/comfirm")
+    @PatchMapping("/{orderId}/confirm")
     @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ConfirmOrderRes> confirmOrder(@PathVariable String orderId) {
         ConfirmOrderRes confirmOrderRes = orderService.confirmOrder(orderId);
         return ResponseEntity.ok(confirmOrderRes);
+    }
+
+    @PatchMapping("/{orderId}/picking")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<PickingOrderRes> pickOrder(@PathVariable String orderId) {
+        PickingOrderRes pickingOrderRes = orderService.pickingOrder(orderId);
+        return ResponseEntity.ok(pickingOrderRes);
+    }
+
+    @PatchMapping("/{orderId}/shipping")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ShippingOrderRes> shippingOrder(@PathVariable String orderId) {
+        ShippingOrderRes shippingOrderRes = orderService.shippingOrder(orderId);
+        return ResponseEntity.ok(shippingOrderRes);
+    }
+
+    @PatchMapping("/{orderId}/deliver")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<DeliveredOrderRes> deliveredOrder(@PathVariable String orderId) {
+        DeliveredOrderRes deliveredOrderRes = orderService.deliveredOrder(orderId);
+        return ResponseEntity.ok(deliveredOrderRes);
+    }
+
+    @PatchMapping("/{orderId}/return")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ReturningOrderRes> returningOrder(@PathVariable String orderId) {
+        ReturningOrderRes returningOrderRes = orderService.returningOrder(orderId);
+        return ResponseEntity.ok(returningOrderRes);
     }
 }
