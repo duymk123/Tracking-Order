@@ -38,10 +38,10 @@ public class UserAddress extends BaseEntity {
     private String district;
 
     @Column(name = "detail_address")
-    private String detail_address;
+    private String detailAddress;
 
     @Column(name = "is_default")
-    private Boolean is_default;
+    private Boolean isDefault;
 
 
 

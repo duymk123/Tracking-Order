@@ -3,6 +3,8 @@ package com.example.trackingorder.service;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
 import com.example.trackingorder.dto.response.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -33,5 +35,9 @@ public interface OrderService {
     ReturningOrderRes returningOrder(String orderId);
 
     ReattemptOrderRes reattemptOrder(String orderId);
+
+    Page<SellerOrderRes> getSellerOrders(Integer pageSize, Integer pageNumber);
+
+    SellerOrderDetailRes getSellerOrderDetail(String orderId);
 
 }

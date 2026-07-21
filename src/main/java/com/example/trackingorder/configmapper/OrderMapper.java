@@ -27,7 +27,7 @@ public interface OrderMapper {
     @Mapping(target = "province", source = "address.province")
     @Mapping(target = "city", source = "address.city")
     @Mapping(target = "district", source = "address.district")
-    @Mapping(target = "detailAddress", source = "address.detail_address")
+    @Mapping(target = "detailAddress", source = "address.detailAddress")
     @Mapping(target = "items", source = "orderItems")
     OrderDetailRes toOrderDetailRes(Order order);
 

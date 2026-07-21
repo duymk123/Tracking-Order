@@ -3,6 +3,9 @@ package com.example.trackingorder.service.impl;
 import com.example.trackingorder.common.OrderStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import com.example.trackingorder.configmapper.OrderMapper;
+import com.example.trackingorder.configmapper.SellerOrderDetailMapper;
+import com.example.trackingorder.configmapper.SellerOrderMapper;
+import com.example.trackingorder.configmapper.TrackingLogMapper;
 import com.example.trackingorder.dto.request.OrderSummaryItemReq;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
@@ -16,11 +19,16 @@ import com.example.trackingorder.service.CouponService;
 import com.example.trackingorder.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.*;
 
 @Service
@@ -38,6 +46,9 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryRepo inventoryRepo;
     private final CartRepo cartRepo;
     private final OrderMapper orderMapper;
+    private final SellerOrderMapper sellerOrderMapper;
+    private final SellerOrderDetailMapper sellerOrderDetailMapper;
+    private final TrackingLogMapper trackingLogMapper;
 
     // mapping quantity -> variants
     private Map<String, Integer> getQuantityMap(List<OrderSummaryItemReq> items) {
@@ -145,6 +156,7 @@ public class OrderServiceImpl implements OrderService {
         trackingLog.setTitle(title);
         trackingLog.setNote(note);
         trackingLog.setLocationDescription(location);
+        trackingLog.setTimestamp(new Timestamp(System.currentTimeMillis()));
 
         trackingLogRepo.save(trackingLog);
     }
@@ -549,7 +561,7 @@ public class OrderServiceImpl implements OrderService {
         if (!hasPermission) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
-                    "You are not allowed to confirm this order");
+                    "You are not allowed to update this order");
         }
 
         updateOrderStatus(
@@ -578,6 +590,22 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepo.findDetailForSeller(orderId)
                 .orElseThrow(() ->
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to update this order");
+        }
 
         updateOrderStatus(
                 order,
@@ -619,7 +647,7 @@ public class OrderServiceImpl implements OrderService {
         if (!hasPermission) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
-                    "You are not allowed to confirm this order");
+                    "You are not allowed to update this order");
         }
 
 
@@ -649,6 +677,21 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() ->
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to confirm this order");
+        }
+
         updateOrderStatus(
                 order,
                 seller,
@@ -665,6 +708,49 @@ public class OrderServiceImpl implements OrderService {
                 .message("Delivery reattempt scheduled")
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SellerOrderRes> getSellerOrders(Integer pageSize, Integer pageNumber) {
+        User seller = authenticationFacade.getCurrentUser();
+
+        Pageable pageable = PageRequest.of(
+                pageNumber - 1,
+                pageSize,
+                Sort.by("createdAt").descending()
+        );
+
+        Page<Order> orders = orderRepo.findAll(pageable);
+        log.info("Getting SellerOrders for {} Orders", orders.getTotalElements());
+
+        if (orders.isEmpty()) {
+            log.info("No orders found");
+            return Page.empty(pageable);
+        }
+        return orders.map(sellerOrderMapper::toSellerOrderRes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SellerOrderDetailRes getSellerOrderDetail(String orderId) {
+        User seller = authenticationFacade.getCurrentUser();
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow( () ->
+                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+
+        // tracking log
+        List<TrackingLog> trackingLogs = trackingLogRepo.findByOrderId(order.getId());
+
+        // mapping
+        SellerOrderDetailRes sellerOrderDetailRes = sellerOrderDetailMapper.toSellerOrderDetailRes(order);
+
+        //set tracking log
+        sellerOrderDetailRes.setTrackingLogs(trackingLogMapper.toTrackingHistoryResList(trackingLogs));
+
+        return sellerOrderDetailRes;
+    }
+
 
 }
 

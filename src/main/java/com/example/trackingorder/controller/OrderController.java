@@ -6,7 +6,9 @@ import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.service.OrderService;
 import com.example.trackingorder.service.TrackingLogService;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -59,7 +61,7 @@ public class OrderController {
 
     }
 
-    @PatchMapping("/{orderId}/confirm")
+    @PatchMapping("/{orderId}/comfirm")
     @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ConfirmOrderRes> confirmOrder(@PathVariable String orderId) {
         ConfirmOrderRes confirmOrderRes = orderService.confirmOrder(orderId);
@@ -108,5 +110,20 @@ public class OrderController {
         return ResponseEntity.ok(reattemptOrderRes);
     }
 
+    @GetMapping("/seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<Page<SellerOrderRes>> getSellerOrders(
+            @RequestParam(defaultValue = "5") Integer pageSize,
+            @RequestParam(defaultValue = "1") Integer pageNumber) {
+        return ResponseEntity.ok(orderService.getSellerOrders(pageSize, pageNumber));
+
+    }
+
+    @GetMapping("/seller/{orderId}")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<SellerOrderDetailRes> getSellerOrderDetail(@PathVariable String orderId) {
+        SellerOrderDetailRes sellerOrderDetailRes = orderService.getSellerOrderDetail(orderId);
+        return ResponseEntity.ok(sellerOrderDetailRes);
+    }
 
 }

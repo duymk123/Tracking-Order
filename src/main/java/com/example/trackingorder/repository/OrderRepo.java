@@ -2,6 +2,8 @@ package com.example.trackingorder.repository;
 
 import com.example.trackingorder.entity.Order;
 import com.example.trackingorder.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -45,4 +47,6 @@ public interface OrderRepo extends JpaRepository<Order, String> {
     Optional<Order> findDetailForSeller(@Param("orderId") String orderId);
 
     Optional<Order> findByIdAndUser(String orderId, User user);
+
+    Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

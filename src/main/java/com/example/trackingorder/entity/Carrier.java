@@ -25,11 +25,11 @@ public class Carrier extends BaseEntity {
     private String name;
 
     @Column(name = "api_endpoint")
-    private String api_endpoint;
+    private String apiEndpoint;
 
     @Column(name = "is_active")
-    private boolean is_active;
+    private boolean isActive;
 
     @Column(name = "support_regions")
-    private String support_regions;
+    private String supportRegions;
 }
