@@ -6,9 +6,7 @@ import com.example.trackingorder.configmapper.OrderMapper;
 import com.example.trackingorder.configmapper.SellerOrderDetailMapper;
 import com.example.trackingorder.configmapper.SellerOrderMapper;
 import com.example.trackingorder.configmapper.TrackingLogMapper;
-import com.example.trackingorder.dto.request.OrderSummaryItemReq;
-import com.example.trackingorder.dto.request.OrderSummaryReq;
-import com.example.trackingorder.dto.request.PlaceOrderReq;
+import com.example.trackingorder.dto.request.*;
 import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.entity.*;
 import com.example.trackingorder.exception.BadRequestException;
@@ -49,6 +47,8 @@ public class OrderServiceImpl implements OrderService {
     private final SellerOrderMapper sellerOrderMapper;
     private final SellerOrderDetailMapper sellerOrderDetailMapper;
     private final TrackingLogMapper trackingLogMapper;
+    private final CarrierRepo carrierRepo;
+    private final ShipperRepo shipperRepo;
 
     // mapping quantity -> variants
     private Map<String, Integer> getQuantityMap(List<OrderSummaryItemReq> items) {
@@ -399,7 +399,7 @@ public class OrderServiceImpl implements OrderService {
         User seller = authenticationFacade.getCurrentUser();
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
@@ -443,7 +443,7 @@ public class OrderServiceImpl implements OrderService {
         User seller = authenticationFacade.getCurrentUser();
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
@@ -483,32 +483,33 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ShippingOrderRes shippingOrder(String orderId) {
-        // Lấy seller đang đăng nhập
-        User seller = authenticationFacade.getCurrentUser();
+        // User login
+        User user = authenticationFacade.getCurrentUser();
 
-        // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        // Lấy shipper
+        Shipper shipper = shipperRepo.findByUser(user)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
 
-        boolean hasPermission = order.getOrderItems()
-                .stream()
-                .anyMatch(item ->
-                        item.getProductVariant()
-                                .getProduct()
-                                .getSeller()
-                                .getId()
-                                .equals(seller.getId()));
+        // Lấy Order
+        Order order = orderRepo.findOrderDetail(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
 
-        if (!hasPermission) {
+        // Check quyền
+        if (order.getShipper() == null || !order.getShipper().getId().equals(shipper.getId())) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
-                    "You are not allowed to confirm this order");
+                    "You are not allowed to update this order");
         }
 
+        // Check status
         if (order.getStatus() != OrderStatusEnum.PICKING
                 && order.getStatus() != OrderStatusEnum.REATTEMPT) {
-
             throw new BadRequestException(
                     HttpStatus.BAD_REQUEST,
                     "Only PICKING or REATTEMPT orders can be shipped");
@@ -520,13 +521,14 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepo.save(order);
 
+        // Tracking log
         createTrackingLog(
                 order,
-                seller,
+                user,
                 oldStatus,
                 OrderStatusEnum.SHIPPING,
                 "Package Shipped",
-                "Your package has been handed over to the carrier.",
+                "Package has been picked up by shipper.",
                 "Warehouse"
         );
 
@@ -535,30 +537,30 @@ public class OrderServiceImpl implements OrderService {
                 .status(order.getStatus())
                 .message("Order shipped successfully")
                 .build();
-
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DeliveredOrderRes deliveredOrder(String orderId) {
-        // Lấy seller đang đăng nhập
-        User seller = authenticationFacade.getCurrentUser();
+        // Lấy shipper đang đăng nhập
+        User shipperUser = authenticationFacade.getCurrentUser();
+
+        // Tìm shipper
+        Shipper shipper = shipperRepo.findByUser(shipperUser)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
 
-        boolean hasPermission = order.getOrderItems()
-                .stream()
-                .anyMatch(item ->
-                        item.getProductVariant()
-                                .getProduct()
-                                .getSeller()
-                                .getId()
-                                .equals(seller.getId()));
-
-        if (!hasPermission) {
+        // Check quyền
+        if (order.getShipper() == null || !order.getShipper().getId().equals(shipper.getId())) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
                     "You are not allowed to update this order");
@@ -566,13 +568,14 @@ public class OrderServiceImpl implements OrderService {
 
         updateOrderStatus(
                 order,
-                seller,
+                shipperUser,
                 OrderStatusEnum.SHIPPING,
                 OrderStatusEnum.DELIVERED,
                 "Delivered",
                 "Package delivered successfully.",
                 "Customer Address"
         );
+
         return DeliveredOrderRes.builder()
                 .orderId(order.getId())
                 .status(order.getStatus())
@@ -583,25 +586,27 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FailedOrderRes failedOrder(String orderId) {
-        // Lấy seller đang đăng nhập
-        User seller = authenticationFacade.getCurrentUser();
+        // Lấy shipper đang đăng nhập
+        User shipperUser = authenticationFacade.getCurrentUser();
+
+        // Tìm shipper
+        Shipper shipper = shipperRepo.findByUser(shipperUser)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
 
+        // Check quyền
+        if (order.getShipper() == null
+                || !order.getShipper().getId().equals(shipper.getId())) {
 
-        boolean hasPermission = order.getOrderItems()
-                .stream()
-                .anyMatch(item ->
-                        item.getProductVariant()
-                                .getProduct()
-                                .getSeller()
-                                .getId()
-                                .equals(seller.getId()));
-
-        if (!hasPermission) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
                     "You are not allowed to update this order");
@@ -609,7 +614,7 @@ public class OrderServiceImpl implements OrderService {
 
         updateOrderStatus(
                 order,
-                seller,
+                shipperUser,
                 OrderStatusEnum.SHIPPING,
                 OrderStatusEnum.FAILED,
                 "Delivery Failed",
@@ -627,38 +632,42 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ReturningOrderRes returningOrder(String orderId) {
-        // Lấy seller đang đăng nhập
-        User seller = authenticationFacade.getCurrentUser();
+        // Lấy shipper đang đăng nhập
+        User shipperUser = authenticationFacade.getCurrentUser();
+
+        // Tìm shipper
+        Shipper shipper = shipperRepo.findByUser(shipperUser)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
 
-        boolean hasPermission = order.getOrderItems()
-                .stream()
-                .anyMatch(item ->
-                        item.getProductVariant()
-                                .getProduct()
-                                .getSeller()
-                                .getId()
-                                .equals(seller.getId()));
+        // Check quyền
+        if (order.getShipper() == null
+                || !order.getShipper().getId().equals(shipper.getId())) {
 
-        if (!hasPermission) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
                     "You are not allowed to update this order");
         }
 
-
         updateOrderStatus(
                 order,
-                seller,
+                shipperUser,
                 OrderStatusEnum.FAILED,
                 OrderStatusEnum.RETURNING,
                 "Returning",
                 "Package is returning to warehouse.",
-                "Warehouse");
+                "Warehouse"
+        );
+
         return ReturningOrderRes.builder()
                 .orderId(order.getId())
                 .status(order.getStatus())
@@ -669,32 +678,35 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ReattemptOrderRes reattemptOrder(String orderId) {
-        // Lấy seller đang đăng nhập
-        User seller = authenticationFacade.getCurrentUser();
+        // Lấy shipper đang đăng nhập
+        User shipperUser = authenticationFacade.getCurrentUser();
+
+        // Tìm shipper
+        Shipper shipper = shipperRepo.findByUser(shipperUser)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
 
         // Tìm đơn hàng
-        Order order = orderRepo.findDetailForSeller(orderId)
+        Order order = orderRepo.findOrderDetail(orderId)
                 .orElseThrow(() ->
-                        new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
 
-        boolean hasPermission = order.getOrderItems()
-                .stream()
-                .anyMatch(item ->
-                        item.getProductVariant()
-                                .getProduct()
-                                .getSeller()
-                                .getId()
-                                .equals(seller.getId()));
+        // Check quyền
+        if (order.getShipper() == null
+                || !order.getShipper().getId().equals(shipper.getId())) {
 
-        if (!hasPermission) {
             throw new ForbiddenException(
                     HttpStatus.FORBIDDEN,
-                    "You are not allowed to confirm this order");
+                    "You are not allowed to update this order");
         }
 
         updateOrderStatus(
                 order,
-                seller,
+                shipperUser,
                 OrderStatusEnum.FAILED,
                 OrderStatusEnum.REATTEMPT,
                 "Delivery Reattempt",
@@ -736,7 +748,7 @@ public class OrderServiceImpl implements OrderService {
         User seller = authenticationFacade.getCurrentUser();
 
         Order order = orderRepo.findById(orderId)
-                .orElseThrow( () ->
+                .orElseThrow(() ->
                         new NotFoundException(HttpStatus.NOT_FOUND, "Order Not Found"));
 
         // tracking log
@@ -746,6 +758,185 @@ public class OrderServiceImpl implements OrderService {
         SellerOrderDetailRes sellerOrderDetailRes = sellerOrderDetailMapper.toSellerOrderDetailRes(order);
 
         //set tracking log
+        sellerOrderDetailRes.setTrackingLogs(trackingLogMapper.toTrackingHistoryResList(trackingLogs));
+
+        return sellerOrderDetailRes;
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AssignDeliveryRes assignDelivery(String orderId, AssignDeliveryReq req) {
+        // Seller đăng nhập
+        User seller = authenticationFacade.getCurrentUser();
+
+        //Tìm Order
+        Order order = orderRepo.findOrderDetail(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
+
+        // Check quyền Seller
+        boolean hasPermission = order.getOrderItems()
+                .stream()
+                .anyMatch(item ->
+                        item.getProductVariant()
+                                .getProduct()
+                                .getSeller()
+                                .getId()
+                                .equals(seller.getId()));
+
+        if (!hasPermission) {
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to assign delivery");
+        }
+
+        //Chỉ assign khi đang PICKING
+        if (order.getStatus() != OrderStatusEnum.PICKING) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only PICKING orders can assign delivery");
+        }
+
+        // Carrier
+        Carrier carrier = carrierRepo.findById(req.getCarrierId())
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Carrier not found"));
+
+        if (!carrier.isActive()) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Carrier is inactive");
+        }
+
+        // check xem đã assign chưa
+        if (order.getCarrier() != null || order.getShipper() != null) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Delivery has already been assigned");
+        }
+        // Shipper
+        Shipper shipper = shipperRepo.findById(req.getShipperId())
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
+
+        //  Check shipper thuộc carrier
+        if (!shipper.getCarrier().getId().equals(carrier.getId())) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Shipper does not belong to selected carrier");
+        }
+
+        //tracking number
+        String trackingNumber =
+                carrier.getName()
+                        .replace(" ", "")
+                        .toUpperCase()
+                        + "-"
+                        + System.currentTimeMillis();
+
+        //  Estimated delivery
+        Date estimatedDelivery = new Date(System.currentTimeMillis() + 3L * 24 * 60 * 60 * 1000);
+
+        //  Update order
+        order.setCarrier(carrier);
+        order.setShipper(shipper);
+        order.setTrackingNumber(trackingNumber);
+        order.setEstimatedDeliveryDate(estimatedDelivery);
+
+        orderRepo.save(order);
+
+        // Tracking Log
+        createTrackingLog(
+                order,
+                seller,
+                OrderStatusEnum.PICKING,
+                OrderStatusEnum.PICKING,
+                "Delivery Assigned",
+                "Carrier " + carrier.getName()
+                        + " and Shipper "
+                        + shipper.getUser().getUsername()
+                        + " assigned.",
+                "Warehouse"
+        );
+
+
+        return AssignDeliveryRes.builder()
+                .orderId(order.getId())
+                .carrierName(carrier.getName())
+                .shipperName(shipper.getUser().getUsername())
+                .trackingNumber(order.getTrackingNumber())
+                .estimatedDeliveryDate(order.getEstimatedDeliveryDate())
+                .message("Delivery assigned successfully")
+                .build();
+    }
+
+    @Override
+    public Page<SellerOrderRes> getShipperOrders(Integer pageSize, Integer pageNumber) {
+
+        // User login
+        User user = authenticationFacade.getCurrentUser();
+
+        // shipper
+        Shipper shipper = shipperRepo.findByUser(user)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
+
+
+        Pageable pageable = PageRequest.of(
+                pageNumber - 1,
+                pageSize,
+                Sort.by("createdAt").descending());
+
+        Page<Order> orders = orderRepo.findByShipper(shipper, pageable);
+
+        log.info("Shipper {} has {} orders",
+                user.getUsername(),
+                orders.getTotalElements());
+
+        if (orders.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        return orders.map(sellerOrderMapper::toSellerOrderRes);
+    }
+
+    @Override
+    public SellerOrderDetailRes getShipperOrderDetail(String orderId) {
+        User user = authenticationFacade.getCurrentUser();
+
+        Shipper shipper = shipperRepo.findByUser(user)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Shipper not found"));
+
+        Order order = orderRepo.findOrderDetail(orderId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Order not found"));
+
+        // Check quyền
+        if (order.getShipper() == null || !order.getShipper().getId().equals(shipper.getId())) {
+
+            throw new ForbiddenException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to view this order");
+        }
+
+        List<TrackingLog> trackingLogs = trackingLogRepo.findByOrderId(order.getId());
+
+        SellerOrderDetailRes sellerOrderDetailRes = sellerOrderDetailMapper.toSellerOrderDetailRes(order);
+
         sellerOrderDetailRes.setTrackingLogs(trackingLogMapper.toTrackingHistoryResList(trackingLogs));
 
         return sellerOrderDetailRes;

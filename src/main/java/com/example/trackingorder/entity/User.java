@@ -40,6 +40,8 @@ public class User extends BaseEntity {
     @OneToOne(mappedBy = "user")
     private Cart cart;
 
+    @OneToOne(mappedBy = "user")
+    private Shipper shipper;
 
 
 }

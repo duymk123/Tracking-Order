@@ -65,4 +65,8 @@ public class Order extends BaseEntity {
     @OneToMany(mappedBy = "order")
     private List<OrderItem> orderItems;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shipper_id")
+    private Shipper shipper;
+
 }

@@ -1,6 +1,7 @@
 package com.example.trackingorder.repository;
 
 import com.example.trackingorder.entity.Order;
+import com.example.trackingorder.entity.Shipper;
 import com.example.trackingorder.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,9 +45,14 @@ public interface OrderRepo extends JpaRepository<Order, String> {
             JOIN FETCH p.seller s
             WHERE o.id = :orderId
             """)
-    Optional<Order> findDetailForSeller(@Param("orderId") String orderId);
+    Optional<Order> findOrderDetail(@Param("orderId") String orderId);
 
     Optional<Order> findByIdAndUser(String orderId, User user);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    Page<Order> findByShipper(
+            Shipper shipper,
+            Pageable pageable
+    );
 }

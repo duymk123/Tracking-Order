@@ -1,12 +1,12 @@
 package com.example.trackingorder.controller;
 
+import com.example.trackingorder.dto.request.AssignDeliveryReq;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
 import com.example.trackingorder.dto.response.*;
 import com.example.trackingorder.service.OrderService;
 import com.example.trackingorder.service.TrackingLogService;
 import jakarta.validation.Valid;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -76,35 +76,35 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/shipping")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('SHIPPER')")
     public ResponseEntity<ShippingOrderRes> shippingOrder(@PathVariable String orderId) {
         ShippingOrderRes shippingOrderRes = orderService.shippingOrder(orderId);
         return ResponseEntity.ok(shippingOrderRes);
     }
 
     @PatchMapping("/{orderId}/deliver")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('SHIPPER')")
     public ResponseEntity<DeliveredOrderRes> deliveredOrder(@PathVariable String orderId) {
         DeliveredOrderRes deliveredOrderRes = orderService.deliveredOrder(orderId);
         return ResponseEntity.ok(deliveredOrderRes);
     }
 
     @PatchMapping("/{orderId}/fail")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('SHIPPER')")
     public ResponseEntity<FailedOrderRes> failedOrder(@PathVariable String orderId) {
         FailedOrderRes failedOrderRes = orderService.failedOrder(orderId);
         return ResponseEntity.ok(failedOrderRes);
     }
 
     @PatchMapping("/{orderId}/return")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('SHIPPER')")
     public ResponseEntity<ReturningOrderRes> returningOrder(@PathVariable String orderId) {
         ReturningOrderRes returningOrderRes = orderService.returningOrder(orderId);
         return ResponseEntity.ok(returningOrderRes);
     }
 
     @PatchMapping("/{orderId}/reattempt")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('SHIPPER')")
     public ResponseEntity<ReattemptOrderRes> reattemptOrder(@PathVariable String orderId) {
         ReattemptOrderRes reattemptOrderRes = orderService.reattemptOrder(orderId);
         return ResponseEntity.ok(reattemptOrderRes);
@@ -125,5 +125,30 @@ public class OrderController {
         SellerOrderDetailRes sellerOrderDetailRes = orderService.getSellerOrderDetail(orderId);
         return ResponseEntity.ok(sellerOrderDetailRes);
     }
+
+
+    @PatchMapping("/{orderId}/assign")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<AssignDeliveryRes> assignDelivery(
+            @PathVariable String orderId,
+            @RequestBody @Valid AssignDeliveryReq req) {
+        return ResponseEntity.ok(orderService.assignDelivery(orderId, req));
+    }
+
+    @GetMapping("/shipper")
+    @PreAuthorize("hasRole('SHIPPER')")
+    public ResponseEntity<Page<SellerOrderRes>> getShipperOrders(
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(defaultValue = "1") Integer pageNumber) {
+
+        return ResponseEntity.ok(orderService.getShipperOrders(pageSize, pageNumber));
+    }
+
+    @GetMapping("/shipper/{orderId}")
+    @PreAuthorize("hasRole('SHIPPER')")
+    public ResponseEntity<SellerOrderDetailRes> getShipperOrderDetail(@PathVariable String orderId) {
+        return ResponseEntity.ok(orderService.getShipperOrderDetail(orderId));
+    }
+
 
 }

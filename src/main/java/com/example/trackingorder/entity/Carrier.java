@@ -1,14 +1,13 @@
 package com.example.trackingorder.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -32,4 +31,7 @@ public class Carrier extends BaseEntity {
 
     @Column(name = "support_regions")
     private String supportRegions;
+
+    @OneToMany(mappedBy = "carrier")
+    private List<Shipper> shippers;
 }

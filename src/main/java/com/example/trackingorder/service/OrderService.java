@@ -1,10 +1,8 @@
 package com.example.trackingorder.service;
 
-import com.example.trackingorder.dto.request.OrderSummaryReq;
-import com.example.trackingorder.dto.request.PlaceOrderReq;
+import com.example.trackingorder.dto.request.*;
 import com.example.trackingorder.dto.response.*;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -36,8 +34,15 @@ public interface OrderService {
 
     ReattemptOrderRes reattemptOrder(String orderId);
 
+    // seller xem list order
     Page<SellerOrderRes> getSellerOrders(Integer pageSize, Integer pageNumber);
 
     SellerOrderDetailRes getSellerOrderDetail(String orderId);
 
+    //seller assign order
+    AssignDeliveryRes assignDelivery(String orderId, AssignDeliveryReq req);
+
+    Page<SellerOrderRes> getShipperOrders(Integer pageSize, Integer pageNumber);
+
+    SellerOrderDetailRes getShipperOrderDetail(String orderId);
 }
