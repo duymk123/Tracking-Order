@@ -1,6 +1,7 @@
 package com.example.trackingorder.controller;
 
 import com.example.trackingorder.dto.request.AssignDeliveryReq;
+import com.example.trackingorder.dto.request.BuyNowReq;
 import com.example.trackingorder.dto.request.OrderSummaryReq;
 import com.example.trackingorder.dto.request.PlaceOrderReq;
 import com.example.trackingorder.dto.response.*;
@@ -49,8 +50,18 @@ public class OrderController {
     @GetMapping("/{orderId}")
     @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<OrderDetailRes> getOrderDetail(@PathVariable String orderId) {
-        OrderDetailRes orderDetailRes = orderService.getOderDetail(orderId);
+        OrderDetailRes orderDetailRes = orderService.getOrderDetail(orderId);
         return ResponseEntity.ok(orderDetailRes);
+    }
+
+    @PostMapping("/buy-now")
+    @PreAuthorize("hasRole('BUYER')")
+    public ResponseEntity<BuyNowRes> buyNow(
+            @Valid @RequestBody BuyNowReq req) {
+
+        return ResponseEntity.ok(
+                orderService.buyNow(req)
+        );
     }
 
     @GetMapping("/{orderId}/tracking")

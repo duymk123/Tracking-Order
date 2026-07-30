@@ -381,7 +381,35 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public OrderDetailRes getOderDetail(String orderId) {
+    public BuyNowRes buyNow(BuyNowReq req) {
+        ProductVariant productVariant = productVariantRepo.findById(req.getProductVariantId())
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Product Variant not found"));
+
+        Inventory inventory = inventoryRepo.findByProductVariant(productVariant)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                HttpStatus.NOT_FOUND,
+                                "Inventory not found"));
+
+        if (req.getQuantity() > inventory.getQuantityInStock()) {
+            throw new BadRequestException(
+                    HttpStatus.BAD_REQUEST,
+                    "Not enough stock");
+        }
+
+        return BuyNowRes.builder()
+                .productVariantId(productVariant.getId())
+                .quantity(req.getQuantity())
+                .message("Buy Now initialized successfully")
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderDetailRes getOrderDetail(String orderId) {
         User user = authenticationFacade.getCurrentUser();
 
         // Tim don hang cua user

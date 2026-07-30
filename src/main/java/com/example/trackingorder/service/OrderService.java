@@ -16,10 +16,13 @@ public interface OrderService {
     // get My order
     List<MyOrderRes> getMyOrders();
 
-    // xem chi tiet don hang
-    OrderDetailRes getOderDetail(String orderId);
+    //Buy now
+    BuyNowRes buyNow(BuyNowReq req);
 
-    // Field admin manage Order
+    // xem chi tiet don hang
+    OrderDetailRes getOrderDetail(String orderId);
+
+    // Seller order status management
     ConfirmOrderRes confirmOrder(String orderId);
 
     PickingOrderRes pickingOrder(String orderId);
@@ -45,4 +48,5 @@ public interface OrderService {
     Page<SellerOrderRes> getShipperOrders(Integer pageSize, Integer pageNumber);
 
     SellerOrderDetailRes getShipperOrderDetail(String orderId);
+
 }
