@@ -236,7 +236,7 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public PlaceOrderRes placeOrder(PlaceOrderReq req) {
         //get user login
@@ -260,6 +260,7 @@ public class OrderServiceImpl implements OrderService {
 
         // validate inventory
         validateInventory(productVariants, quantityMap);
+
 
         // tinh subtotal
         BigDecimal subtotal = calculateSubtotal(productVariants, quantityMap);
