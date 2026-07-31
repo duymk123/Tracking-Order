@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface ProductService {
     List<ProductRes> getAll();
+    List<ProductDetailRes> getAllAdmin();
 
     ProductDetailRes getById(String id);
 }

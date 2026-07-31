@@ -4,6 +4,7 @@ import com.example.trackingorder.dto.request.CreateCarrierReq;
 import com.example.trackingorder.dto.request.UpdateCarrierReq;
 import com.example.trackingorder.dto.response.CarrierRes;
 import com.example.trackingorder.dto.response.CreateCarrierRes;
+import com.example.trackingorder.dto.response.ShipperRes;
 import com.example.trackingorder.service.CarrierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/ap1/v1/carriers")
+@RequestMapping("/api/v1/carriers")
 @Validated
 public class CarrierController {
     private final CarrierService carrierService;
@@ -66,5 +67,14 @@ public class CarrierController {
 
         carrierService.inactive(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Lấy danh sách shipper theo carrier — dùng cho màn hình assign delivery của Seller.
+     */
+    @GetMapping("/{id}/shippers")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<List<ShipperRes>> getShippersByCarrier(@PathVariable String id) {
+        return ResponseEntity.ok(carrierService.getShippersByCarrier(id));
     }
 }

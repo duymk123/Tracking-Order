@@ -1,7 +1,7 @@
 package com.example.trackingorder.common;
 
 public enum ReasonEnum {
-    DAMAGE,
+    DAMAGED,
     WRONG_ITEM,
     FAILED_DELIVERY,
     DEFECTIVE

@@ -1,6 +1,7 @@
 package com.example.trackingorder.service.impl;
 
 import com.example.trackingorder.common.StatusReturnEnum;
+import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import com.example.trackingorder.configmapper.ReturnMapper;
 import com.example.trackingorder.dto.request.CreateReturnReq;
 import com.example.trackingorder.dto.response.ReturnRes;
@@ -27,11 +28,12 @@ public class ReturnServiceImpl implements ReturnService {
     private final OrderRepo orderRepo;
     private final UserRepo userRepo;
     private final ReturnMapper mapper;
+    private final AuthenticationFacade authenticationFacade;
 
     @Override
-    public ReturnRes createReturn(String userId, CreateReturnReq req) {
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new NotFoundException(HttpStatus.NOT_FOUND, "User not found"));
+    public ReturnRes createReturn(CreateReturnReq req) {
+        User user = authenticationFacade.getCurrentUser();
+
         Order order = orderRepo.findById(req.getOrderId())
                 .orElseThrow(() -> new NotFoundException(HttpStatus.NOT_FOUND, "Order not found"));
 
@@ -40,7 +42,7 @@ public class ReturnServiceImpl implements ReturnService {
         returnEntity.setOrder(order);
         returnEntity.setReason(req.getReason());
         returnEntity.setOriginType(req.getOriginType());
-        returnEntity.setStatus(StatusReturnEnum.REQUESTEDIN_TRANSIT);
+        returnEntity.setStatus(StatusReturnEnum.PENDING);
         // Assuming refundAmount is order's grand total for simplicity. Should be calculated based on business logic.
         returnEntity.setRefundAmount(order.getGrandTotal());
         returnEntity.setNotes(req.getNotes());
@@ -60,6 +62,14 @@ public class ReturnServiceImpl implements ReturnService {
     @Override
     public List<ReturnRes> getReturnsByOrder(String orderId) {
         return returnRepo.findByOrderId(orderId)
+                .stream()
+                .map(mapper::toReturnRes)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ReturnRes> getAllReturns() {
+        return returnRepo.findAll()
                 .stream()
                 .map(mapper::toReturnRes)
                 .collect(Collectors.toList());

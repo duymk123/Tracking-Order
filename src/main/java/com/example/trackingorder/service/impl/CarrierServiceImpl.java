@@ -1,14 +1,17 @@
 package com.example.trackingorder.service.impl;
 
 import com.example.trackingorder.configmapper.CarrierMapper;
+import com.example.trackingorder.configmapper.ShipperMapper;
 import com.example.trackingorder.dto.request.CreateCarrierReq;
 import com.example.trackingorder.dto.request.UpdateCarrierReq;
 import com.example.trackingorder.dto.response.CarrierRes;
 import com.example.trackingorder.dto.response.CreateCarrierRes;
+import com.example.trackingorder.dto.response.ShipperRes;
 import com.example.trackingorder.entity.Carrier;
 import com.example.trackingorder.exception.BadRequestException;
 import com.example.trackingorder.exception.NotFoundException;
 import com.example.trackingorder.repository.CarrierRepo;
+import com.example.trackingorder.repository.ShipperRepo;
 import com.example.trackingorder.service.CarrierService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +28,8 @@ import java.util.Optional;
 public class CarrierServiceImpl implements CarrierService {
     private final CarrierRepo carrierRepo;
     private final CarrierMapper carrierMapper;
+    private final ShipperRepo shipperRepo;
+    private final ShipperMapper shipperMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -129,6 +134,15 @@ public class CarrierServiceImpl implements CarrierService {
         carrierRepo.save(carrier);
 
         log.info("Carrier {} deactivated", carrier.getName());
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShipperRes> getShippersByCarrier(String carrierId) {
+        // Kiểm tra carrier tồn tại
+        if (!carrierRepo.existsById(carrierId)) {
+            throw new NotFoundException(HttpStatus.NOT_FOUND, "Carrier not found");
+        }
+        return shipperMapper.toShipperResList(shipperRepo.findByCarrierId(carrierId));
     }
 
 }

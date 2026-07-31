@@ -20,13 +20,19 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    @PreAuthorize("hasRole('BUYER')")
+    @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
     public ResponseEntity<List<ProductRes>> getAll() {
         return ResponseEntity.ok(productService.getAll());
     }
 
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<List<ProductDetailRes>> getAllAdmin() {
+        return ResponseEntity.ok(productService.getAllAdmin());
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('BUYER')")
+    @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
     public ResponseEntity<ProductDetailRes> getById(@PathVariable String id) {
         return ResponseEntity.ok(productService.getById(id));
     }

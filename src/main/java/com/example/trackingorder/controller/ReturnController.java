@@ -11,18 +11,23 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/returns")
+@RequestMapping("/api/v1/returns")
 @RequiredArgsConstructor
 public class ReturnController {
 
     private final ReturnService returnService;
 
-    @PostMapping("/{userId}")
+    @GetMapping
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<List<ReturnRes>> getAllReturns() {
+        return ResponseEntity.ok(returnService.getAllReturns());
+    }
+
+    @PostMapping
     @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<ReturnRes> createReturn(
-            @PathVariable String userId,
             @RequestBody CreateReturnReq req) {
-        return ResponseEntity.ok(returnService.createReturn(userId, req));
+        return ResponseEntity.ok(returnService.createReturn(req));
     }
 
     @GetMapping("/user/{userId}")
