@@ -5,16 +5,20 @@ import com.example.trackingorder.common.ReasonEnum;
 import com.example.trackingorder.common.StatusReturnEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 
 @Entity
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "returns")
-public class Return {
+public class Return extends BaseEntity {
     @Id
     @UuidGenerator
     private String id;
