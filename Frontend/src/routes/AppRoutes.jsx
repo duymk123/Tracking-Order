@@ -4,6 +4,7 @@ import { RegisterPage } from "../pages/RegisterPage.jsx";
 import { ProductsPage } from "../pages/ProductsPage.jsx";
 import { ProductDetailPage } from "../pages/ProductDetailPage.jsx";
 import { CartPage } from "../pages/CartPage.jsx";
+import { CheckoutPage } from "../pages/CheckoutPage.jsx";
 import { MyOrdersPage } from "../pages/MyOrdersPage.jsx";
 import { OrderDetailPage } from "../pages/OrderDetailPage.jsx";
 import { SellerOrdersPage } from "../pages/SellerOrdersPage.jsx";
@@ -42,7 +43,7 @@ export function AppRoutes() {
       <Route path="/cart" element={<Guarded><CartPage /></Guarded>} />
       <Route path="/orders" element={<Guarded><MyOrdersPage /></Guarded>} />
       <Route path="/orders/:orderId" element={<Guarded><OrderDetailPage /></Guarded>} />
-      <Route path="/checkout" element={<Guarded><AppLayout><div className="py-10 text-center font-semibold text-slate-500">Checkout — Coming Soon</div></AppLayout></Guarded>} />
+      <Route path="/checkout" element={<Guarded><CheckoutPage /></Guarded>} />
 
       {/* SELLER */}
       <Route path="/seller/orders" element={<Guarded><SellerOrdersPage /></Guarded>} />

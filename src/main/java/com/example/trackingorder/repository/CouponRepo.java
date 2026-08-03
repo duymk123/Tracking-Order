@@ -10,8 +10,13 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface CouponRepo extends JpaRepository<Coupon, String> {
+    // Dùng trong write transaction (increaseUsedCount)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Coupon> findByCode(String code);
+
+    // Dùng trong read-only transaction (calculateCoupon / getOrderSummary) - không cần lock
+    @Query("SELECT c FROM Coupon c WHERE c.code = :code")
+    Optional<Coupon> findByCodeReadOnly(@Param("code") String code);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

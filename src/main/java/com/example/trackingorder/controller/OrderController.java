@@ -59,8 +59,7 @@ public class OrderController {
     public ResponseEntity<BuyNowRes> buyNow(
             @Valid @RequestBody BuyNowReq req) {
 
-        return ResponseEntity.ok(
-                orderService.buyNow(req)
+        return ResponseEntity.ok(orderService.buyNow(req)
         );
     }
 

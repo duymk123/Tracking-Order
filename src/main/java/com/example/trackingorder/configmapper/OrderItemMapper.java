@@ -11,7 +11,9 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface OrderItemMapper {
     @Mapping(source = "productVariant.id", target = "productVariantId")
+    @Mapping(source = "productVariant.product.id", target = "productId")
     @Mapping(source = "productVariant.product.name", target = "productName")
+    @Mapping(source = "productVariant.name", target = "variantName")
     @Mapping(source = "productVariant.sku", target = "sku")
     @Mapping(source = "quantity", target = "quantity")
     @Mapping(source = "unitPrice", target = "unitPrice")

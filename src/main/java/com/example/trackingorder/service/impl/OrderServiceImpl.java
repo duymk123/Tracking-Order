@@ -1,5 +1,6 @@
 package com.example.trackingorder.service.impl;
 
+import com.example.trackingorder.common.FeatureFlags;
 import com.example.trackingorder.common.OrderStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import com.example.trackingorder.configmapper.OrderMapper;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.togglz.core.manager.FeatureManager;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -49,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
     private final TrackingLogMapper trackingLogMapper;
     private final CarrierRepo carrierRepo;
     private final ShipperRepo shipperRepo;
+    private final FeatureManager featureManager;
 
     // mapping quantity -> variants
     private Map<String, Integer> getQuantityMap(List<OrderSummaryItemReq> items) {
@@ -126,6 +129,11 @@ public class OrderServiceImpl implements OrderService {
             // price = basic + modifier
             BigDecimal price = productVariant.getProduct().getBasePrice()
                     .add(productVariant.getPriceModifier());
+
+            log.info("PRICE_INCREASE flag active: {}", featureManager.isActive(FeatureFlags.PRICE_INCREASE));
+            if(featureManager.isActive(FeatureFlags.PRICE_INCREASE)) {
+                price = price.multiply(BigDecimal.valueOf(1.10));
+            }
 
             //item subtotal
             BigDecimal itemSubtotal = price.multiply(BigDecimal.valueOf(quantity));
@@ -304,6 +312,11 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal unitPrice = productVariant.getProduct().getBasePrice()
                     .add(productVariant.getPriceModifier());
 
+            // Áp dụng PRICE_INCREASE flag (đồng bộ với calculateSubtotal)
+            if (featureManager.isActive(FeatureFlags.PRICE_INCREASE)) {
+                unitPrice = unitPrice.multiply(BigDecimal.valueOf(1.10));
+            }
+
             // orderItem
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
@@ -383,6 +396,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public BuyNowRes buyNow(BuyNowReq req) {
+        // Check Feature Flag trước khi xử lí
+        if (!featureManager.isActive(FeatureFlags.BUY_NOW)) {
+            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
+        }
+
+
         ProductVariant productVariant = productVariantRepo.findById(req.getProductVariantId())
                 .orElseThrow(() ->
                         new NotFoundException(
@@ -411,7 +430,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public OrderDetailRes getOrderDetail(String orderId) {
+        // check cờ
+        if(!featureManager.isActive(FeatureFlags.ORDER_DETAIL)) {
+            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
+        }
+
         User user = authenticationFacade.getCurrentUser();
+
 
         // Tim don hang cua user
         Order order = orderRepo.findOrderDetail(orderId, user)

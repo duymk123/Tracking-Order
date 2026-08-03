@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 @Builder
 public class OrderItemDetailRes {
     private String productVariantId;
+    private String productId;
     private String productName;
+    private String variantName;
     private String sku;
     private Integer quantity;
     private BigDecimal unitPrice;

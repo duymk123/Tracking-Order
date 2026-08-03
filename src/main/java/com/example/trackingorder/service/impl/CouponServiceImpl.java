@@ -28,7 +28,7 @@ public class CouponServiceImpl implements CouponService {
             return BigDecimal.ZERO;
         }
 
-        Coupon coupon = couponRepo.findByCode(couponCode)
+        Coupon coupon = couponRepo.findByCodeReadOnly(couponCode)
                 .orElseThrow(() -> new NotFoundException(HttpStatus.NOT_FOUND, "Coupon code not found"));
 
         // check expire
