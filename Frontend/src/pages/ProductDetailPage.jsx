@@ -16,18 +16,21 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [actionMsg, setActionMsg] = useState("");
   const [activeTab, setActiveTab] = useState("description"); // description or reviews
+  const [isBuyNowActive, setIsBuyNowActive] = useState(false);
 
   useEffect(() => {
     Promise.all([
       apiRequest(`/api/v1/products/${productId}`),
-      apiRequest(`/api/reviews/product/${productId}`).catch(() => []) // If reviews fail, just empty array
+      apiRequest(`/api/reviews/product/${productId}`).catch(() => []), // If reviews fail, just empty array
+      apiRequest("/api/v1/features/buy-now").catch(() => ({ active: false }))
     ])
-      .then(([productData, reviewsData]) => {
+      .then(([productData, reviewsData, featureData]) => {
         setProduct(productData);
         setReviews(reviewsData);
         if (productData.variants?.length > 0) {
           setSelectedVariant(productData.variants[0]);
         }
+        setIsBuyNowActive(featureData?.active || false);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -52,9 +55,14 @@ export function ProductDetailPage() {
     try {
       await apiRequest("/api/v1/orders/buy-now", {
         method: "POST",
-        body: JSON.stringify({ productVariantId: selectedVariant.id, quantity: 1 }),
+        body: JSON.stringify({ productVariantId: selectedVariant.id, quantity }),
       });
-      navigate("/cart");
+      navigate("/checkout", {
+        state: {
+          items: [{ productVariantId: selectedVariant.id, quantity }],
+          isBuyNow: true,
+        },
+      });
     } catch (e) {
       setActionMsg("❌ " + e.message);
     }
@@ -192,13 +200,15 @@ export function ProductDetailPage() {
                 </div>
               )}
 
-              <button
-                onClick={handleBuyNow}
-                disabled={!selectedVariant || selectedVariant.quantityInStock === 0}
-                className="w-full py-4 rounded-lg bg-[#1565c0] text-white font-black hover:bg-[#0d47a1] shadow-lg shadow-blue-900/20 transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
-              >
-                Mua ngay
-              </button>
+              {isBuyNowActive && (
+                <button
+                  onClick={handleBuyNow}
+                  disabled={!selectedVariant || selectedVariant.quantityInStock === 0}
+                  className="w-full py-4 rounded-lg bg-[#1565c0] text-white font-black hover:bg-[#0d47a1] shadow-lg shadow-blue-900/20 transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                >
+                  Mua ngay
+                </button>
+              )}
 
               {/* Trust Badges */}
               <div className="mt-auto pt-8 grid grid-cols-3 gap-4 border-t border-slate-100">

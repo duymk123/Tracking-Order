@@ -215,7 +215,17 @@ export function CartPage() {
                 
                 <button
                   disabled={cartItems.length === 0 || hasOutOfStock}
-                  onClick={() => navigate("/checkout")}
+                  onClick={() =>
+                    navigate("/checkout", {
+                      state: {
+                        items: cartItems.map((item) => ({
+                          productVariantId: item.productVariantId,
+                          quantity: item.quantity,
+                        })),
+                        isBuyNow: false,
+                      },
+                    })
+                  }
                   className="w-full flex items-center justify-center gap-2 bg-[#1a429b] text-white py-4 rounded-xl font-black hover:bg-[#123175] shadow-lg shadow-blue-900/20 transition disabled:opacity-50 disabled:shadow-none mb-4"
                 >
                   Place Order
