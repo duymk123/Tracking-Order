@@ -86,19 +86,7 @@
             <scope>compile</scope>
         </dependency>
 
-        <!-- Togglz Spring Boot Starter -->
-        <dependency>
-            <groupId>org.togglz</groupId>
-            <artifactId>togglz-spring-boot-starter</artifactId>
-            <version>4.6.2</version>
-        </dependency>
 
-        <!-- Togglz Admin Console (UI quản lý feature flags) -->
-        <dependency>
-            <groupId>org.togglz</groupId>
-            <artifactId>togglz-console</artifactId>
-            <version>4.6.2</version>
-        </dependency>
 
 
     </dependencies>

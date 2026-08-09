@@ -43,32 +43,6 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * Filter chain cho Togglz Console — dùng Form Login (có trang đăng nhập đẹp)
-     * Chỉ cho phép SELLER truy cập
-     */
-    @Bean
-    @org.springframework.core.annotation.Order(1)
-    public SecurityFilterChain togglzFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/togglz-console/**", "/login", "/logout")
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login").permitAll()
-                        .requestMatchers("/togglz-console/**").hasRole("SELLER")
-                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/login.html")                          // Trang login tự tạo
-                        .loginProcessingUrl("/login")                       // Spring Security xử lý POST này
-                        .defaultSuccessUrl("/togglz-console/index", true)  // Sau login → vào Console
-                        .failureUrl("/login.html?error")                    // Sai pass → hiện lỗi
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login.html?logout")
-                        .permitAll());
-        return http.build();
-    }
 
     /**
      * Filter chain cho REST API — dùng Basic Auth như cũ

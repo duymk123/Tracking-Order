@@ -130,7 +130,7 @@ public class UserServiceImpl implements UserService {
 
         user = userRepo.save(user);
 
-        if (user.getRole() == RoleEnum.BUYER) {
+        if (RoleEnum.BUYER.equals(user.getRole())) {
             Cart cart = new Cart();
             cart.setUser(user);
             cartRepo.save(cart);

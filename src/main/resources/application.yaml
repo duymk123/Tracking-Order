@@ -4,6 +4,9 @@ spring:
     password: root
     url: jdbc:mysql://localhost:3306/tracking_order
 
+feature-flag:
+  service:
+    url: http://localhost:8081
 
 
 logging:
@@ -16,16 +19,3 @@ logging:
         security: DEBUG
       hibernate:
         SQL: DEBUG
-
-
-togglz:
-  enabled: true
-  console:
-    enabled: true
-    path: /togglz-console
-    secured: true #false(bất kì ai cũng có thể vào dc consle) true(chỉ feature Admin)
-  feature-enums: com.example.trackingorder.common.FeatureFlags
-
-  ## có 2 cách :
-  # cách 1: dùng feature trong yaml
-  # cách 2: dùng enum và config feature-enums
