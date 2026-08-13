@@ -1,13 +1,13 @@
 package com.example.trackingorder.controller;
 
-import com.example.trackingorder.client.FeatureFlagClient;
+import com.example.trackingorder.service.FeatureService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -19,26 +19,25 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FeatureController {
 
-    private final FeatureFlagClient featureFlagClient;
+    private final FeatureService featureService;
 
     @GetMapping("/buy-now")
     public ResponseEntity<Map<String, Boolean>> isBuyNowActive() {
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("active", featureFlagClient.isEnabled("BUY_NOW"));
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(featureService.isBuyNowActive());
     }
 
     @GetMapping("/price-increase")
     public ResponseEntity<Map<String, Boolean>> isPriceIncreaseActive() {
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("active", featureFlagClient.isEnabled("PRICE_INCREASE"));
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(featureService.isPriceIncreaseActive());
     }
 
     @GetMapping("/order")
     public ResponseEntity<Map<String, Boolean>> isOrderActive() {
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("active", featureFlagClient.isEnabled("ORDER_DETAIL"));
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(featureService.isOrderActive());
+    }
+
+    @GetMapping("/debug")
+    public ResponseEntity<Map<String, String>> debugContext(HttpServletRequest request) {
+        return ResponseEntity.ok(featureService.debugContext(request));
     }
 }

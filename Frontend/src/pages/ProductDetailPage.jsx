@@ -21,7 +21,7 @@ export function ProductDetailPage() {
   useEffect(() => {
     Promise.all([
       apiRequest(`/api/v1/products/${productId}`),
-      apiRequest(`/api/reviews/product/${productId}`).catch(() => []), // If reviews fail, just empty array
+      apiRequest(`/api/v1/reviews/product/${productId}`).catch(() => []), // If reviews fail, just empty array
       apiRequest("/api/v1/features/buy-now").catch(() => ({ active: false }))
     ])
       .then(([productData, reviewsData, featureData]) => {
@@ -289,4 +289,3 @@ export function ProductDetailPage() {
     </StorefrontLayout>
   );
 }
-

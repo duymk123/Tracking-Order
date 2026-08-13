@@ -30,7 +30,9 @@ public class JpaAuditingConfig {
             if (authentication == null
                     || !authentication.isAuthenticated()
                     || authentication instanceof AnonymousAuthenticationToken) {
-                return Optional.empty();
+                // Trả về 'SYSTEM' thay vì empty() để các tác vụ gọi từ internal API (không có token)
+                // vẫn được ghi nhận là do hệ thống thực hiện, tránh lỗi null created_by/updated_by
+                return Optional.of("SYSTEM");
             }
 
             // Chỉ lấy username, KHÔNG query database

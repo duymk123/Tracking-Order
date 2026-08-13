@@ -56,11 +56,8 @@ public class OrderController {
 
     @PostMapping("/buy-now")
     @PreAuthorize("hasRole('BUYER')")
-    public ResponseEntity<BuyNowRes> buyNow(
-            @Valid @RequestBody BuyNowReq req) {
-
-        return ResponseEntity.ok(orderService.buyNow(req)
-        );
+    public ResponseEntity<BuyNowRes> buyNow(@Valid @RequestBody BuyNowReq req) {
+        return ResponseEntity.ok(orderService.buyNow(req));
     }
 
     @GetMapping("/{orderId}/tracking")

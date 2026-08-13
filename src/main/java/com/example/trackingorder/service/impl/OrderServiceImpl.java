@@ -58,8 +58,6 @@ public class OrderServiceImpl implements OrderService {
         Map<String, Integer> quantityMap = new HashMap<>();
 
         for (OrderSummaryItemReq item : items) {
-
-            //fix lỗi variant bị trùng trong request A:2, A:5 -> A :5
             if (quantityMap.containsKey(item.getProductVariantId())) {
                 throw new BadRequestException(HttpStatus.BAD_REQUEST, "Duplicate product variant id " + item.getProductVariantId());
             }
