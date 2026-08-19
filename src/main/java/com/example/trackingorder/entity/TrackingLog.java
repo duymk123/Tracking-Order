@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class TrackingLog extends BaseEntity {
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)

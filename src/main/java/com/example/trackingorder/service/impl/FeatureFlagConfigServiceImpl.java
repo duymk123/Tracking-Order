@@ -59,17 +59,17 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
 
                 if (customers == null || customers.isEmpty()) {
                     // No customer-specific rules → single global row
-                    configs.add(toConfig(feature, null, globalEnabled, version));
+                    configs.add(toConfig(feature, null, globalEnabled, version, request.getCustomerCode()));
                     continue;
                 }
 
-                // Customer-specific rules: each customer gets their own row.
-                // The customer's own `enabled` flag is the authoritative decision for that IP.
-                // A global fallback row (no IP) is also added for requests that don't match any customer.
-                configs.add(toConfig(feature, null, globalEnabled, version));
+                // Global row
+                configs.add(toConfig(feature, null, globalEnabled, version, request.getCustomerCode()));
+
+                // Customer-specific rows (priority overrides based on IP)
                 for (CustomerFeatureSyncItem customer : customers) {
                     boolean customerEnabled = Boolean.TRUE.equals(customer.getEnabled());
-                    configs.add(toConfig(feature, customer, customerEnabled, version));
+                    configs.add(toConfig(feature, customer, customerEnabled, version, request.getCustomerCode()));
                 }
             }
         }
@@ -109,9 +109,13 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
                     .filter(c -> normalizeClientIp(c.getClientIp()).equals(clientIp))
                     .findFirst();
             if (ipMatch.isPresent()) {
-                boolean customerEnabled = Boolean.TRUE.equals(ipMatch.get().getEnabled());
-                log.info("User co IP [{}] nam trong danh sách Customer. flag status {} là: {}", clientIp, flagName, customerEnabled);
-                return customerEnabled;
+
+                FeatureFlagConfig customerConfig = ipMatch.get();
+
+                // Vẫn check ON/OFF nhưng gọi evaluateConfig để check thêm Strategy riêng của cty
+                boolean result = evaluateConfig(customerConfig);
+                log.info("User co IP [{}] nam trong danh sách Customer. flag '{}' evaluate result: {}", clientIp, flagName, result);
+                return result;
             }
         }
 
@@ -223,12 +227,13 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
             FeatureFlagSyncItem feature,
             CustomerFeatureSyncItem customer,
             boolean enabled,
-            String version
+            String version,
+            String globalCustomerCode
     ) {
         FeatureFlagConfig config = new FeatureFlagConfig();
         config.setFlagName(feature.getFlagName().trim().toUpperCase(Locale.ROOT));
         config.setEnabled(enabled);
-        config.setCustomerCode(customer == null ? null : customer.getCustomerCode());
+        config.setCustomerCode(customer == null ? globalCustomerCode : customer.getCustomerCode());
         config.setClientIp(customer == null ? null : normalizeClientIp(customer.getIpAddress()));
 
         if (customer == null) {

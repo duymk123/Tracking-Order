@@ -22,6 +22,7 @@ import java.util.List;
 public class Order extends BaseEntity {
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)

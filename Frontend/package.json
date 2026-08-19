@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:a": "vite --mode company-a --port 5174",
+    "dev:b": "vite --mode company-b --port 5175",
     "build": "vite build",
     "preview": "vite preview"
   },

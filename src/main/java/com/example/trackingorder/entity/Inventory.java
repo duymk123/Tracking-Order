@@ -16,6 +16,7 @@ import org.hibernate.annotations.UuidGenerator;
 public class Inventory extends BaseEntity{
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)

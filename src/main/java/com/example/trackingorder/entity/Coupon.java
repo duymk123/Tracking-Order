@@ -20,6 +20,7 @@ import java.util.Date;
 public class Coupon extends BaseEntity {
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @Column(name = "code")

@@ -20,6 +20,7 @@ import java.util.List;
 public class ProductCategory extends BaseEntity {
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @Column(name = "name")

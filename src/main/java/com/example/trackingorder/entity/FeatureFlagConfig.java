@@ -27,6 +27,7 @@ public class FeatureFlagConfig extends BaseEntity {
 
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @Column(name = "flag_name", nullable = false, length = 100)

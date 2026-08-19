@@ -11,5 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FeatureFlagSyncRequest {
     private String version;
+    private String customerCode;
     private List<FeatureFlagSyncItem> features;
 }

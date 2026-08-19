@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 public class OrderItem extends BaseEntity{
     @Id
     @UuidGenerator
+    @Column(name = "id", length = 36)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
