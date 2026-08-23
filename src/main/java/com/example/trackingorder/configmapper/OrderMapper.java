@@ -13,7 +13,7 @@ import java.util.List;
 public interface OrderMapper {
 
     // My order
-    @Mapping(target = "orderId", source = "id")
+    @Mapping(target = "orderId", source = "id" //
     @Mapping(target = "createdAt", source = "createdAt")
     @Mapping(target = "totalItems", expression = "java(calculateTotalItems(order))")
     MyOrderRes toMyOrderRes(Order order);
@@ -29,7 +29,7 @@ public interface OrderMapper {
     @Mapping(target = "district", source = "address.district")
     @Mapping(target = "detailAddress", source = "address.detailAddress")
     @Mapping(target = "items", source = "orderItems")
-    OrderDetailRes toOrderDetailRes(Order order);
+        OrderDetailRes toOrderDetailRes(Order order);
 
 
     default Integer calculateTotalItems(Order order) {

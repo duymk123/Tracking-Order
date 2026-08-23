@@ -21,3 +21,4 @@ logging:
         security: DEBUG
       hibernate:
         SQL: DEBUG
+        ddl-auto: update

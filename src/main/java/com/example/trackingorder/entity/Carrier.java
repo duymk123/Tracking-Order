@@ -35,4 +35,7 @@ public class Carrier extends BaseEntity {
 
     @OneToMany(mappedBy = "carrier")
     private List<Shipper> shippers;
+
+    @Column(name "aaa")
+    private String a;
 }

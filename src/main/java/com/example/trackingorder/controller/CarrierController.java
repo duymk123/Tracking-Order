@@ -8,6 +8,7 @@ import com.example.trackingorder.dto.response.ShipperRes;
 import com.example.trackingorder.service.CarrierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -20,6 +21,7 @@ import java.util.List;
 @RequestMapping("/api/v1/carriers")
 @Validated
 public class CarrierController {
+
     private final CarrierService carrierService;
 
     @GetMapping
@@ -43,6 +45,7 @@ public class CarrierController {
 
         return ResponseEntity.ok(createCarrierRes);
     }
+
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SELLER')")
