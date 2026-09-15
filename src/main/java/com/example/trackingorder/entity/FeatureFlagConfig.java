@@ -42,11 +42,11 @@ public class FeatureFlagConfig extends BaseEntity {
     @Column(name = "client_ip", length = 100)
     private String clientIp;
 
-    @Column(name = "strategy_id", length = 100)
-    private String strategyId;
+    @Column(name = "strategies", columnDefinition = "json")
+    private String strategies;
 
-    @Column(name = "strategy_params", columnDefinition = "json")
-    private String strategyParams;
+    @Column(name = "strategy_logic", length = 3)
+    private String strategyLogic;
 
     @Column(name = "applied_version", nullable = false, length = 100)
     private String appliedVersion;

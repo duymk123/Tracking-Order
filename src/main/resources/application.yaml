@@ -3,12 +3,21 @@ spring:
     username: root
     password: root
     url: jdbc:mysql://localhost:3306/tracking_order
+  jpa:
+    hibernate:
+      ddl-auto: update
 
 
 feature-flag:
   service:
     url: http://localhost:8081
   sync-token: change-me
+
+
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  access-token-expiration: 300000 # 5 minutes (in ms) // có quyền truy cập api trong 5P
+  refresh-token-expiration: 604800000 # 7 days (in ms) // lấy token mới trong vòng 7 days
 
 
 logging:
@@ -21,4 +30,3 @@ logging:
         security: DEBUG
       hibernate:
         SQL: DEBUG
-        ddl-auto: update

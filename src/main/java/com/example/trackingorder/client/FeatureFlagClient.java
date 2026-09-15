@@ -4,6 +4,10 @@ import com.example.trackingorder.service.FeatureFlagConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
+import static java.util.Collections.emptyMap;
+
 /**
  * Local feature flag facade.
  * Feature config is synced from feature-flag-service into tracking-order,
@@ -33,6 +37,16 @@ public class FeatureFlagClient {
         } catch (RuntimeException e) {
             log.error("Cannot evaluate local feature flag {}. Fallback false.", flagName, e);
             return false;
+        }
+    }
+
+    //
+    public Map<String, Boolean> evaluateAll() {
+        try {
+            return featureFlagConfigService.evaluateAll();
+        } catch (RuntimeException e) {
+            log.error("Cannot evaluate all local feature flags. Fallback empty.", e);
+            return emptyMap();
         }
     }
 }

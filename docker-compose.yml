@@ -1,0 +1,192 @@
+services:
+  # ==========================================
+  # 1. Admin Feature Flag Service & DB (Central Control Plane)
+  # ==========================================
+  admin-feature-flag-db:
+    image: mysql:8.0.33
+    container_name: admin-feature-flag-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: admin_db
+    ports:
+      - "33064:3306"
+    volumes:
+      - admin-feature-flag-db-data:/var/lib/mysql
+    networks:
+      - viettel-network
+
+  admin-feature-flag-service:
+    build:
+      context: ../admin-feature-flag-service
+      dockerfile: Dockerfile
+    container_name: admin-feature-flag-service
+    ports:
+      - "8084:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://admin-feature-flag-db:3306/admin_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FEATURE_FLAG_SERVICE_URL=http://feature-flag-service-a:8081
+      - FEATURE_FLAG_SERVICE_A_URL=http://feature-flag-service-a:8081
+      - FEATURE_FLAG_SERVICE_B_URL=http://feature-flag-service-b:8081
+    depends_on:
+      - admin-feature-flag-db
+    restart: on-failure
+    networks:
+      - viettel-network
+
+  # ==========================================
+  # 2. INSTANCE A (Tenant A - Company A)
+  # ==========================================
+  # 2.1 Feature Flag Service & DB for Instance A
+  feature-flag-service-a-db:
+    image: mysql:8.0.33
+    container_name: feature-flag-service-a-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: feature_flag_db
+    ports:
+      - "33061:3306"
+    volumes:
+      - feature-flag-db-data:/var/lib/mysql
+    networks:
+      - viettel-network
+
+  feature-flag-service-a:
+    build:
+      context: ../feature-flag-service
+      dockerfile: Dockerfile
+    container_name: feature-flag-service-a
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://feature-flag-service-a-db:3306/feature_flag_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - TRACKING_ORDER_SERVICE_URL=http://tracking-order-a:8080
+    depends_on:
+      - feature-flag-service-a-db
+    restart: on-failure
+    networks:
+      - viettel-network
+
+  # 2.2 Tracking Order Service & DB for Instance A
+  tracking-order-db-a:
+    image: mysql:8.0.33
+    container_name: tracking-order-db-a
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: tracking_order
+    ports:
+      - "33062:3306"
+    volumes:
+      - tracking-order-db-a-data:/var/lib/mysql
+    networks:
+      - viettel-network
+
+  tracking-order-a:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracking-order-a
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://tracking-order-db-a:3306/tracking_order?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FEATURE_FLAG_SERVICE_URL=http://feature-flag-service-a:8081
+    depends_on:
+      - tracking-order-db-a
+    restart: on-failure
+    networks:
+      - viettel-network
+
+  # ==========================================
+  # 3. INSTANCE B (Tenant B - Company B)
+  # ==========================================
+  # 3.1 Feature Flag Service & DB for Instance B
+  feature-flag-service-b-db:
+    image: mysql:8.0.33
+    container_name: feature-flag-service-b-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: feature_flag_db
+    ports:
+      - "33065:3306"
+    volumes:
+      - feature-flag-service-b-db-data:/var/lib/mysql
+    networks:
+      - viettel-network
+
+  feature-flag-service-b:
+    build:
+      context: ../feature-flag-service
+      dockerfile: Dockerfile
+    container_name: feature-flag-service-b
+    ports:
+      - "8085:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://feature-flag-service-b-db:3306/feature_flag_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - TRACKING_ORDER_SERVICE_URL=http://tracking-order-b:8080
+    depends_on:
+      - feature-flag-service-b-db
+    restart: on-failure
+    networks:
+      - viettel-network
+
+  # 3.2 Tracking Order Service & DB for Instance B
+  tracking-order-db-b:
+    image: mysql:8.0.33
+    container_name: tracking-order-db-b
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: tracking_order
+    ports:
+      - "33063:3306"
+    volumes:
+      - tracking-order-db-b-data:/var/lib/mysql
+    networks:
+      - viettel-network
+
+  tracking-order-b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracking-order-b
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://tracking-order-db-b:3306/tracking_order?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FEATURE_FLAG_SERVICE_URL=http://feature-flag-service-b:8081
+    depends_on:
+      - tracking-order-db-b
+    restart: on-failure
+    networks:
+      - viettel-network
+
+networks:
+  viettel-network:
+    driver: bridge
+
+volumes:
+  admin-feature-flag-db-data:
+  feature-flag-db-data:
+    name: code_feature-flag-db-data
+    external: true
+  feature-flag-service-b-db-data:
+  tracking-order-db-a-data:
+    name: code_tracking-order-db-a-data
+    external: true
+  tracking-order-db-b-data:
+    name: code_tracking-order-db-b-data
+    external: true

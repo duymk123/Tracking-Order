@@ -4,6 +4,7 @@ import { apiRequest } from "../api/httpClient.js";
 import { StorefrontLayout } from "../layouts/StorefrontLayout.jsx";
 import { ArrowLeft, Box, CheckCircle2, ChevronRight, Package, ShoppingCart, Star, StarHalf, ShieldCheck, Truck, RotateCcw } from "lucide-react";
 import { getImageForProduct } from "../utils/imageMapper.js";
+import { useFeatureFlag } from "../hooks/useFeatureFlag.js";
 
 export function ProductDetailPage() {
   const { productId } = useParams();
@@ -16,21 +17,19 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [actionMsg, setActionMsg] = useState("");
   const [activeTab, setActiveTab] = useState("description"); // description or reviews
-  const [isBuyNowActive, setIsBuyNowActive] = useState(false);
+  const isBuyNowActive = useFeatureFlag("BUY_NOW");
 
   useEffect(() => {
     Promise.all([
       apiRequest(`/api/v1/products/${productId}`),
       apiRequest(`/api/v1/reviews/product/${productId}`).catch(() => []), // If reviews fail, just empty array
-      apiRequest("/api/v1/features/buy-now").catch(() => ({ active: false }))
     ])
-      .then(([productData, reviewsData, featureData]) => {
+      .then(([productData, reviewsData]) => {
         setProduct(productData);
         setReviews(reviewsData);
         if (productData.variants?.length > 0) {
           setSelectedVariant(productData.variants[0]);
         }
-        setIsBuyNowActive(featureData?.active || false);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

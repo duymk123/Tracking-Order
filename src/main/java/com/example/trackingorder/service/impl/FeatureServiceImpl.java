@@ -18,18 +18,8 @@ public class FeatureServiceImpl implements FeatureService {
     private final FeatureFlagClient featureFlagClient;
 
     @Override
-    public Map<String, Boolean> isBuyNowActive() {
-        return Map.of("active", featureFlagClient.isEnabled("BUY_NOW"));
-    }
-
-    @Override
-    public Map<String, Boolean> isPriceIncreaseActive() {
-        return Map.of("active", featureFlagClient.isEnabled("PRICE_INCREASE"));
-    }
-
-    @Override
-    public Map<String, Boolean> isOrderActive() {
-        return Map.of("active", featureFlagClient.isEnabled("ORDER_DETAIL"));
+    public Map<String, Boolean> evaluateAll() {
+        return featureFlagClient.evaluateAll();
     }
 
     @Override

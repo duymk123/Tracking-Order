@@ -1,4 +1,4 @@
-import { LogOut, Package, PackageSearch, RotateCcw, Truck, User } from "lucide-react";
+import { LogOut, Package, PackageSearch, RotateCcw, Truck, User, Flag } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { clearCredentials, getStoredProfile } from "../services/authStorage.js";
 
@@ -16,6 +16,7 @@ export function AdminLayout({ children }) {
     { to: "/seller/orders", icon: <Package size={20} />, label: "Quản lý đơn hàng" },
     { to: "/seller/returns", icon: <RotateCcw size={20} />, label: "Yêu cầu trả hàng" },
     { to: "/seller/inventory", icon: <PackageSearch size={20} />, label: "Kho hàng (Read-only)" },
+    { to: "/seller/feature-flags", icon: <Flag size={20} />, label: "Feature Flags" },
   ];
 
   return (

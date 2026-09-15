@@ -5,15 +5,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+// Đại diện 1 feature-flag trong snapshot
 public class FeatureFlagSyncItem {
     private String flagName;
     private Boolean enabled;
-    private String strategyId;
-    private Map<String, String> strategyParams;
+    private String strategyLogic;
+
+    // thay thế strategyId và paramId -> strategies
+    private List<StrategyItemSync> strategies;
+
     private List<CustomerFeatureSyncItem> customers;
 }

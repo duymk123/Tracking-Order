@@ -3,6 +3,7 @@ package com.example.trackingorder.service.impl;
 import com.example.trackingorder.dto.featureflag.CustomerFeatureSyncItem;
 import com.example.trackingorder.dto.featureflag.FeatureFlagSyncItem;
 import com.example.trackingorder.dto.featureflag.FeatureFlagSyncRequest;
+import com.example.trackingorder.dto.featureflag.StrategyItemSync;
 import com.example.trackingorder.entity.FeatureFlagConfig;
 import com.example.trackingorder.repository.FeatureFlagConfigRepo;
 import com.example.trackingorder.service.FeatureFlagConfigService;
@@ -18,13 +19,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
@@ -58,15 +53,12 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
                 List<CustomerFeatureSyncItem> customers = feature.getCustomers();
 
                 if (customers == null || customers.isEmpty()) {
-                    // No customer-specific rules → single global row
                     configs.add(toConfig(feature, null, globalEnabled, version, request.getCustomerCode()));
                     continue;
                 }
 
-                // Global row
                 configs.add(toConfig(feature, null, globalEnabled, version, request.getCustomerCode()));
 
-                // Customer-specific rows (priority overrides based on IP)
                 for (CustomerFeatureSyncItem customer : customers) {
                     boolean customerEnabled = Boolean.TRUE.equals(customer.getEnabled());
                     configs.add(toConfig(feature, customer, customerEnabled, version, request.getCustomerCode()));
@@ -86,104 +78,115 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
         if (flagName == null || flagName.isBlank()) {
             return false;
         }
-//        1. CHỌC XUỐNG DB: Lấy toàn bộ danh sách cấu hình của cờ này từ database tracking-order
         List<FeatureFlagConfig> configs = featureFlagConfigRepo.findByFlagNameIgnoreCase(flagName);
 
         if (configs.isEmpty()) {
             log.debug("Feature flag {} has no local config. Fallback false.", flagName);
             return false;
         }
-        // 2. Lấy IP của người dùng đang gửi request
         String clientIp = resolveClientIp();
-        log.info(" Check flag: '{}' | IP request: '{}' | Username: '{}'", flagName, clientIp, getCurrentUsername());
+        log.info("Check flag: '{}' | IP request: '{}' | Username: '{}'", flagName, clientIp, getCurrentUsername());
 
-        // Tách IP-specific vs global rows
         List<FeatureFlagConfig> ipRules     = configs.stream().filter(c ->  hasText(c.getClientIp())).toList();
         List<FeatureFlagConfig> globalRules = configs.stream().filter(c -> !hasText(c.getClientIp())).toList();
 
-        // 1. Ưu tiên IP-specific row nếu có IP match
-        // Ý nghĩa: Đã vào danh sách Customer (IP whitelist) thì được ưu tiên áp dụng luôn,
-        // KHÔNG cần phải thoả mãn thêm Strategy (username/role) của global nữa.
         if (hasText(clientIp)) {
             Optional<FeatureFlagConfig> ipMatch = ipRules.stream()
                     .filter(c -> normalizeClientIp(c.getClientIp()).equals(clientIp))
                     .findFirst();
             if (ipMatch.isPresent()) {
-
                 FeatureFlagConfig customerConfig = ipMatch.get();
-
-                // Vẫn check ON/OFF nhưng gọi evaluateConfig để check thêm Strategy riêng của cty
                 boolean result = evaluateConfig(customerConfig);
-                log.info("User co IP [{}] nam trong danh sách Customer. flag '{}' evaluate result: {}", clientIp, flagName, result);
+                log.info("User with IP [{}] matched Customer rule. flag '{}' evaluate result: {}", clientIp, flagName, result);
                 return result;
             }
         }
 
-        // 2. Không match IP → dùng global row + evaluate strategy
         return globalRules.stream().anyMatch(this::evaluateConfig);
     }
 
-    /**
-     * Kiểm tra config: enabled=true VÀ strategy (nếu có) match với context hiện tại.
-     */
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Boolean> evaluateAll() {
+        List<String> allFlags = featureFlagConfigRepo.findDistinctFlagNames();
+        Map<String, Boolean> result = new HashMap<>();
+        for (String flagName : allFlags) {
+            result.put(flagName, isEnabled(flagName));
+        }
+        return result;
+    }
+
+
+    // nhiều strategy
     private boolean evaluateConfig(FeatureFlagConfig config) {
         if (!Boolean.TRUE.equals(config.getEnabled())) {
             return false;
         }
-        return evaluateStrategy(config.getStrategyId(), fromJson(config.getStrategyParams()));
+
+        List<StrategyItemSync> strategies = parseStrategies(config.getStrategies());
+
+        if (strategies.isEmpty()) {
+            return true;
+        }
+
+        String logic = config.getStrategyLogic() != null ? config.getStrategyLogic() : "OR";
+        if ("AND".equalsIgnoreCase(logic)) {
+            return strategies.stream()
+                    .allMatch(s -> evaluateStrategy(s.getStrategyId(), s.getParams() != null ? s.getParams() : Map.of()));
+        } else {
+            return strategies.stream()
+                    .anyMatch(s -> evaluateStrategy(s.getStrategyId(), s.getParams() != null ? s.getParams() : Map.of()));
+        }
     }
 
-    /**
-     * Evaluate strategy dựa trên strategyId và params lưu trong snapshot.
-     * Nếu không có strategy → chỉ cần enabled = true là đủ.
-     */
+
     private boolean evaluateStrategy(String strategyId, Map<String, String> params) {
         if (!hasText(strategyId)) {
-            return true; // Không có strategy → flag bật là xong
+            return true;
         }
 
         return switch (strategyId.toLowerCase(Locale.ROOT)) {
 
-            case "username" -> {
-                // Param: users = "duymk123,duy23"
-                String users = params.getOrDefault("users", "");
+            case "username", "users_by_name" -> {
+                String users = params.getOrDefault("users", params.getOrDefault("value", ""));
                 String currentUser = getCurrentUsername();
                 if (!hasText(currentUser) || !hasText(users)) yield false;
-                yield Arrays.stream(users.split(","))
+                yield Arrays.stream(users.split("[,\\s]+"))
                         .map(String::trim)
+                        .filter(s -> !s.isEmpty())
                         .anyMatch(u -> u.equalsIgnoreCase(currentUser));
             }
 
-            case "user-role" -> {
-                // Param: roles = "ROLE_BUYER,ROLE_ADMIN"
-                String roles = params.getOrDefault("roles", "");
+            case "user-role", "user_role", "role" -> {
+                String roles = params.getOrDefault("roles", params.getOrDefault("role", params.getOrDefault("value", "")));
                 if (!hasText(roles)) yield false;
                 Collection<? extends GrantedAuthority> authorities = getCurrentAuthorities();
-                yield Arrays.stream(roles.split(","))
+                yield Arrays.stream(roles.split("[,\\s]+"))
                         .map(String::trim)
+                        .filter(s -> !s.isEmpty())
                         .anyMatch(role -> authorities.stream().anyMatch(a ->
                                 a.getAuthority().equalsIgnoreCase(role) ||
                                 a.getAuthority().equalsIgnoreCase("ROLE_" + role)));
             }
 
-            case "remote-client-ip" -> {
-                // Param: ips = "192.168.1.10,10.0.0.5"
-                String ips = params.getOrDefault("ips", "");
+            case "remote-client-ip", "ip_whitelist", "ip" -> {
+                String ips = params.getOrDefault("ips", params.getOrDefault("value", ""));
                 String clientIp = resolveClientIp();
                 if (!hasText(ips) || !hasText(clientIp)) yield false;
-                yield Arrays.stream(ips.split(","))
+                yield Arrays.stream(ips.split("[,\\s]+"))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
                         .map(this::normalizeClientIp)
                         .anyMatch(ip -> ip.equals(clientIp));
             }
 
-            case "release-date" -> {
-                // Param: date = "2026-08-10" hoặc "2026-08-10 00:00:00"
-                String dateStr = params.getOrDefault("date", "");
+            case "release-date", "release_date" -> {
+                String dateStr = params.getOrDefault("date", params.getOrDefault("releaseDate", params.getOrDefault("value", "")));
                 if (!hasText(dateStr)) yield false;
                 try {
                     java.time.LocalDateTime releaseDate = dateStr.length() <= 10
-                            ? java.time.LocalDate.parse(dateStr).atStartOfDay()
-                            : java.time.LocalDateTime.parse(dateStr.replace(" ", "T"));
+                            ? java.time.LocalDate.parse(dateStr.trim()).atStartOfDay()
+                            : java.time.LocalDateTime.parse(dateStr.trim().replace(" ", "T"));
                     yield java.time.LocalDateTime.now().isAfter(releaseDate);
                 } catch (Exception e) {
                     log.warn("Cannot parse release-date: {}", dateStr);
@@ -191,11 +194,37 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
                 }
             }
 
+            case "gradual-rollout", "gradual_rollout", "gradual_rollout_user_id", "rollout" -> {
+                String pctStr = params.getOrDefault("percentage", params.getOrDefault("value", "0"));
+                try {
+                    int percentage = Integer.parseInt(pctStr.trim().replace("%", ""));
+                    if (percentage <= 0) yield false;
+                    if (percentage >= 100) yield true;
+                    String currentUser = getCurrentUsername();
+                    String id = hasText(currentUser) ? currentUser : resolveClientIp();
+                    if (!hasText(id)) yield false;
+                    int hash = Math.abs(id.hashCode()) % 100;
+                    yield hash < percentage;
+                } catch (Exception e) {
+                    yield false;
+                }
+            }
+
             default -> {
-                log.debug("Unknown strategyId '{}' — treating as enabled", strategyId);
-                yield true;
+                log.warn("Unknown strategyId '{}' - treating as disabled (false)", strategyId);
+                yield false;
             }
         };
+    }
+
+    private List<StrategyItemSync> parseStrategies(String json) {
+        if (!hasText(json)) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<StrategyItemSync>>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Cannot parse strategies JSON: {}", json);
+            return List.of();
+        }
     }
 
     private String getCurrentUsername() {
@@ -212,17 +241,6 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
         return auth.getAuthorities();
     }
 
-    private Map<String, String> fromJson(String json) {
-        if (!hasText(json)) return Map.of();
-        try {
-            return objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
-        } catch (JsonProcessingException e) {
-            log.warn("Cannot parse strategy_params JSON: {}", json);
-            return Map.of();
-        }
-    }
-
-
     private FeatureFlagConfig toConfig(
             FeatureFlagSyncItem feature,
             CustomerFeatureSyncItem customer,
@@ -237,24 +255,24 @@ public class FeatureFlagConfigServiceImpl implements FeatureFlagConfigService {
         config.setClientIp(customer == null ? null : normalizeClientIp(customer.getIpAddress()));
 
         if (customer == null) {
-            config.setStrategyId(feature.getStrategyId());
-            config.setStrategyParams(toJson(feature.getStrategyParams()));
+            config.setStrategies(strategiesToJson(feature.getStrategies()));
+            config.setStrategyLogic(feature.getStrategyLogic());
         } else {
-            config.setStrategyId(customer.getStrategyId());
-            config.setStrategyParams(toJson(customer.getStrategyParams()));
+            config.setStrategies(strategiesToJson(customer.getStrategies()));
+            config.setStrategyLogic(customer.getStrategyLogic());
         }
         config.setAppliedVersion(version);
         return config;
     }
 
-    private String toJson(Map<String, String> params) {
-        if (params == null || params.isEmpty()) {
+    private String strategiesToJson(List<StrategyItemSync> strategies) {
+        if (strategies == null || strategies.isEmpty()) {
             return null;
         }
         try {
-            return objectMapper.writeValueAsString(params);
+            return objectMapper.writeValueAsString(strategies);
         } catch (JsonProcessingException e) {
-            log.warn("Cannot serialize feature strategy params. Store null instead.", e);
+            log.warn("Cannot serialize strategies to JSON", e);
             return null;
         }
     }

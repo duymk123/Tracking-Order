@@ -1,15 +1,31 @@
 import { apiRequest } from "../api/httpClient.js";
-import { saveCredentials, saveProfile } from "./authStorage.js";
+import { saveAuthData, clearAuthData } from "./authStorage.js";
 
+/**
+ * Đăng nhập người dùng bằng JWT.
+ * Gọi API POST /api/v1/auth/login, nhận Access Token, Refresh Token, User Profile & Features Snapshot.
+ */
 export async function signIn({ username, password }) {
-  const profile = await apiRequest("/api/v1/users/me", {
-    method: "GET",
-    credentialsOverride: { username, password },
+  const authResponse = await apiRequest("/api/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
   });
 
-  saveCredentials({ username, password });
-  saveProfile(profile);
-  return profile;
+  saveAuthData({
+    accessToken: authResponse.accessToken,
+    refreshToken: authResponse.refreshToken,
+    user: authResponse.user,
+    features: authResponse.features,
+  });
+
+  return authResponse.user;
+}
+
+/**
+ * Đăng xuất người dùng
+ */
+export function signOut() {
+  clearAuthData();
 }
 
 export function getRoleHomePath(role) {

@@ -1,5 +1,6 @@
 package com.example.trackingorder.service.impl;
 
+import com.example.trackingorder.annotation.RequireFeature;
 import com.example.trackingorder.client.FeatureFlagClient;
 import com.example.trackingorder.common.OrderStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
@@ -391,11 +392,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
+    @RequireFeature(flags = "BUY_NOW")
     public BuyNowRes buyNow(BuyNowReq req) {
-        // Check Feature Flag trước khi xử lí
-        if (!featureFlagClient.isEnabled("BUY_NOW")) {
-            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
-        }
+//        // Check Feature Flag trước khi xử lí
+//        if (!featureFlagClient.isEnabled("BUY_NOW")) {
+//            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
+//        }
+        // ĐÃ ĐƯỢC CHECK TỰ ĐỘNG BỞI AOP TRƯỚC KHI VÀO ĐÂY
 
 
         ProductVariant productVariant = productVariantRepo.findById(req.getProductVariantId())
@@ -425,11 +428,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
+    @RequireFeature(flags = "ORDER_DETAIL")
     public OrderDetailRes getOrderDetail(String orderId) {
-        // check cờ
-        if(!featureFlagClient.isEnabled("ORDER_DETAIL")) {
-            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
-        }
+//        // check cờ
+//        if(!featureFlagClient.isEnabled("ORDER_DETAIL")) {
+//            throw new BadRequestException(HttpStatus.BAD_REQUEST, "Tính năng đang bảo trì");
+//        }
 
         User user = authenticationFacade.getCurrentUser();
 

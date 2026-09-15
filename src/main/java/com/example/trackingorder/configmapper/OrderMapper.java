@@ -13,7 +13,7 @@ import java.util.List;
 public interface OrderMapper {
 
     // My order
-    @Mapping(target = "orderId", source = "id" //
+    @Mapping(target = "orderId", source = "id") //
     @Mapping(target = "createdAt", source = "createdAt")
     @Mapping(target = "totalItems", expression = "java(calculateTotalItems(order))")
     MyOrderRes toMyOrderRes(Order order);

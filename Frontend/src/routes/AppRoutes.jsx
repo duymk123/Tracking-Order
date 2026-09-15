@@ -14,13 +14,14 @@ import { ShipperOrderDetailPage } from "../pages/ShipperOrderDetailPage.jsx";
 import { ShipperProfilePage } from "../pages/ShipperProfilePage.jsx";
 import { ReturnsManagementPage } from "../pages/ReturnsManagementPage.jsx";
 import { InventoryPage } from "../pages/InventoryPage.jsx";
-import { getStoredCredentials } from "../services/authStorage.js";
+import { FeatureFlagManagementPage } from "../pages/FeatureFlagManagementPage.jsx";
+import { getAccessToken } from "../services/authStorage.js";
 import { AppLayout } from "../layouts/AppLayout.jsx";
 
 // Guard: chưa đăng nhập → về /login
 function RequireAuth({ children }) {
-  const creds = getStoredCredentials();
-  if (!creds?.username) {
+  const token = getAccessToken();
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -50,6 +51,7 @@ export function AppRoutes() {
       <Route path="/seller/orders/:orderId" element={<Guarded><SellerOrderDetailPage /></Guarded>} />
       <Route path="/seller/returns" element={<Guarded><ReturnsManagementPage /></Guarded>} />
       <Route path="/seller/inventory" element={<Guarded><InventoryPage /></Guarded>} />
+      <Route path="/seller/feature-flags" element={<Guarded><FeatureFlagManagementPage /></Guarded>} />
 
       {/* SHIPPER */}
       <Route path="/shipper/orders" element={<Guarded><ShipperOrdersPage /></Guarded>} />

@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * Controller cho phép Frontend query trạng thái feature flags.
- * Thay vì dùng Togglz, giờ delegate sang FeatureFlagClient.
- */
 @RestController
 @RequestMapping("/api/v1/features")
 @RequiredArgsConstructor
@@ -21,19 +17,9 @@ public class FeatureController {
 
     private final FeatureService featureService;
 
-    @GetMapping("/buy-now")
-    public ResponseEntity<Map<String, Boolean>> isBuyNowActive() {
-        return ResponseEntity.ok(featureService.isBuyNowActive());
-    }
-
-    @GetMapping("/price-increase")
-    public ResponseEntity<Map<String, Boolean>> isPriceIncreaseActive() {
-        return ResponseEntity.ok(featureService.isPriceIncreaseActive());
-    }
-
-    @GetMapping("/order")
-    public ResponseEntity<Map<String, Boolean>> isOrderActive() {
-        return ResponseEntity.ok(featureService.isOrderActive());
+    @GetMapping("/evaluate-all")
+    public ResponseEntity<Map<String, Object>> evaluateAll() {
+        return ResponseEntity.ok(Map.of("items", featureService.evaluateAll()));
     }
 
     @GetMapping("/debug")
