@@ -392,7 +392,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireFeature(flags = "BUY_NOW")
+    @RequireFeature(features = "BUY_NOW")
     public BuyNowRes buyNow(BuyNowReq req) {
 //        // Check Feature Flag trước khi xử lí
 //        if (!featureFlagClient.isEnabled("BUY_NOW")) {
@@ -428,7 +428,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireFeature(flags = "ORDER_DETAIL")
+    @RequireFeature(features = "ORDER_DETAIL")
     public OrderDetailRes getOrderDetail(String orderId) {
 //        // check cờ
 //        if(!featureFlagClient.isEnabled("ORDER_DETAIL")) {

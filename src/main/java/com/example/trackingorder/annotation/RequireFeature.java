@@ -16,11 +16,10 @@ public @interface RequireFeature {
 //    String[] value() default {};
 
 
+//    @RequireFeature(features = {"BUY_NOW"})
+    String[] features() default {};
 
-//     @RequireFeature(flags = {"BUY_NOW"})
-    String[] flags() default {};
-
-   // bắn message lỗi
+    // bắn message lỗi
     String message() default "Tính năng đang bảo trì";
 
 //    Trong Java Annotation, nếu đặt tên thuộc tính là value(),

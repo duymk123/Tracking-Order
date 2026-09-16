@@ -11,9 +11,6 @@ import org.aspectj.lang.annotation.Before;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
 @Aspect
 @Component
 @Slf4j
@@ -28,7 +25,7 @@ public class FeatureFlagAspect {
     public void checkFeatureFlag(JoinPoint joinPoint, RequireFeature requireFeature) {
 
         // Lấy danh sách feature flags (ưu tiên flags, nếu trống thì lấy value)
-        String[] features = requireFeature.flags();
+        String[] features = requireFeature.features();
 
         // Lặp qua danh sách feature để kiểm tra
         for (String feature : features) {
