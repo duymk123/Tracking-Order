@@ -10,9 +10,9 @@ Dự án này là một thành phần trong hệ sinh thái Microservices quản
 
 | Tầng kiến trúc (Plane) | Tên Service / Repository | Vai trò & Trách nhiệm chính | Trạng thái Repo |
 | :--- | :--- | :--- | :---: |
-| **1. Control Plane** | [🏛️ `admin-feature-flag-service`](https://github.com/duymk123/admin-feature-flag-service) | Quản lý đối tác (Tenants), danh mục cờ toàn cục (Master Features), cấp quyền cờ cho từng tenant | Đang viết doc |
-| **2. Tenant Flag Plane** | [🚩 `feature-flag-service`](https://github.com/duymk123/feature-flag-service) | Cấu hình rule theo role/user/percentage, đóng gói & đẩy file snapshot cấu hình sang ứng dụng | Đang viết doc |
-| **3. Core SDK Lib** | [📦 `feature-flag-lib`](https://github.com/duymk123/feature-flag-lib) | Thư viện Java SDK in-memory evaluation (~0ms latency), cung cấp annotation `@RequireFeature` | Đã tích hợp |
+| **1. Control Plane** | [🏛️ `admin-feature-flag-service`](https://github.com/duymk123/admin-feature-flag-service) | Quản lý đối tác (Tenants), danh mục cờ toàn cục (Master Features), cấp quyền cờ cho từng tenant | [Xem README](https://github.com/duymk123/admin-feature-flag-service#readme) • **Hoàn thành** |
+| **2. Tenant Flag Plane** | [🚩 `feature-flag-service`](https://github.com/duymk123/feature-flag-service) | Cấu hình rule theo role/user/percentage, đóng gói & đẩy file snapshot cấu hình sang ứng dụng | [Xem README](https://github.com/duymk123/feature-flag-service#readme) • **Hoàn thành** |
+| **3. Core SDK Lib** | [📦 `feature-flag-lib`](https://github.com/duymk123/feature-flag-lib) | Thư viện Java SDK in-memory evaluation (~0ms latency), cung cấp annotation `@RequireFeature` | [Xem Repo](https://github.com/duymk123/feature-flag-lib) • **Đã tích hợp** |
 | **4. Business App Plane** | [🛒 `tracking-order`](https://github.com/duymk123/Tracking-Order) | **👉 Đang ở đây (Repo này):** Nghiệp vụ E-commerce, Order Tracking, nhận file snapshot và thực thi cờ | **Hoàn thành** |
 
 ```
