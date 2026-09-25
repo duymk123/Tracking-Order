@@ -4,6 +4,24 @@
 
 ---
 
+## 🌐 Hệ sinh thái Microservices (Ecosystem Navigation)
+
+Dự án này là một thành phần trong hệ sinh thái Microservices quản lý cờ tính năng và thương mại điện tử đa tenant:
+
+| Tầng kiến trúc (Plane) | Tên Service / Repository | Vai trò & Trách nhiệm chính | Trạng thái Repo |
+| :--- | :--- | :--- | :---: |
+| **1. Control Plane** | [🏛️ `admin-feature-flag-service`](https://github.com/duymk123/admin-feature-flag-service) | Quản lý đối tác (Tenants), danh mục cờ toàn cục (Master Features), cấp quyền cờ cho từng tenant | Đang viết doc |
+| **2. Tenant Flag Plane** | [🚩 `feature-flag-service`](https://github.com/duymk123/feature-flag-service) | Cấu hình rule theo role/user/percentage, đóng gói & đẩy file snapshot cấu hình sang ứng dụng | Đang viết doc |
+| **3. Core SDK Lib** | [📦 `feature-flag-lib`](https://github.com/duymk123/feature-flag-lib) | Thư viện Java SDK in-memory evaluation (~0ms latency), cung cấp annotation `@RequireFeature` | Đã tích hợp |
+| **4. Business App Plane** | [🛒 `tracking-order`](https://github.com/duymk123/Tracking-Order) | **👉 Đang ở đây (Repo này):** Nghiệp vụ E-commerce, Order Tracking, nhận file snapshot và thực thi cờ | **Hoàn thành** |
+
+```
+[ admin-feature-flag-service ] ──(Grant cờ)──► [ feature-flag-service ] ──(Sync File)──► [ tracking-order ]
+      (Central Control Plane)                       (Tenant Flag Plane)                     (Business App)
+```
+
+---
+
 ## 📑 Mục lục (Table of Contents)
 
 1. [Giới thiệu tổng quan](#1-giới-thiệu-tổng-quan)
