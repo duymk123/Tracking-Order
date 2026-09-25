@@ -1,6 +1,6 @@
 package com.example.trackingorder.service.impl;
 
-import com.example.trackingorder.client.FeatureFlagClient;
+import com.example.featureflag.client.FeatureFlagClient;
 import com.example.trackingorder.service.FeatureService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

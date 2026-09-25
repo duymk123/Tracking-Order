@@ -9,8 +9,6 @@ spring:
 
 
 feature-flag:
-  service:
-    url: http://localhost:8081
   sync-token: change-me
 
 

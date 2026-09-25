@@ -62,9 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/users/register",
-                                "/api/v1/feature-flags/sync",
-                                "/api/v1/feature-flags/users",
-                                "/api/v1/feature-flags/roles",
+                                "/api/v1/feature-flags/**",
                                 "/error"
                         ).permitAll()
                         .anyRequest().authenticated()

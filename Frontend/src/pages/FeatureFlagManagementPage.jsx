@@ -323,18 +323,23 @@ const DatePickerParam = ({ value, onChange }) => {
 };
 
 export function FeatureFlagManagementPage() {
-  // Current Customer State for this Dedicated Instance
-  const [customer, setCustomer] = useState({
+  // Current Customer Info for this Dedicated Instance
+  const customer = {
     customerCode: CURRENT_CUSTOMER_CODE,
-    name: DEFAULT_CUSTOMER_NAME,
-    ipAddress: '127.0.0.1',
-    serviceUrl: ''
-  });
+    name: DEFAULT_CUSTOMER_NAME
+  };
 
   const [flags, setFlags] = useState([]);
-  const [customerFlags, setCustomerFlags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+
+  // Import / Export File States
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [selectedImportFile, setSelectedImportFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Drawer / Multi-Strategy Editor State
   const [selectedFlag, setSelectedFlag] = useState(null);
@@ -501,6 +506,93 @@ export function FeatureFlagManagementPage() {
     .finally(() => setApplying(false));
   };
 
+  // Import File Handlers
+  const handleFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result);
+        setSelectedImportFile(file);
+        setImportPreview({
+          fileName: file.name,
+          fileSize: (file.size / 1024).toFixed(1) + ' KB',
+          version: json.version || 'Không xác định',
+          customerCode: json.customerCode || 'ALL',
+          featuresCount: Array.isArray(json.features) ? json.features.length : 0,
+          features: Array.isArray(json.features) ? json.features : []
+        });
+        setImportModalOpen(true);
+      } catch (err) {
+        showToast('Lỗi đọc file', 'File được chọn không đúng định dạng JSON: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const confirmImport = () => {
+    if (!selectedImportFile) return;
+    setImporting(true);
+
+    const formData = new FormData();
+    formData.append('file', selectedImportFile);
+
+    fetch(`${FF_API_BASE}/api/v1/flags/import`, {
+      method: 'POST',
+      body: formData
+    })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Lỗi khi import file');
+        return data;
+      })
+      .then(data => {
+        showToast('🎉 Import Thành Công!', `Đã nạp ${data.syncedRows || data.flags?.length || 0} cờ từ file ${data.fileName}!`, 'success');
+        setImportModalOpen(false);
+        setImportPreview(null);
+        setSelectedImportFile(null);
+        loadCustomerData();
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Lỗi Import', err.message, 'error');
+      })
+      .finally(() => setImporting(false));
+  };
+
+  // Export File Handler
+  const handleExportConfig = () => {
+    setExporting(true);
+    fetch(`${FF_API_BASE}/api/v1/flags/export`)
+      .then(async res => {
+        if (!res.ok) throw new Error('Không thể xuất file cấu hình từ Feature Flag Service');
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = `feature-flags-${customer.customerCode || 'SNAPSHOT'}.json`;
+        if (disposition && disposition.includes('filename=')) {
+          const match = disposition.match(/filename="?([^";]+)"?/);
+          if (match && match[1]) filename = match[1];
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast('Thành công', `Đã xuất cấu hình ra file ${filename}!`, 'success');
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Lỗi Xuất File', err.message, 'error');
+      })
+      .finally(() => setExporting(false));
+  };
+
   // Drawer / Multi-Strategy Handlers
   const openDrawer = (flag) => {
     const effectiveStrategies = flag?.strategies || [];
@@ -593,12 +685,6 @@ export function FeatureFlagManagementPage() {
             </div>
             <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-3">
               <span className="flag-key font-bold text-slate-700">{customer.customerCode}</span>
-              <span className="font-mono text-slate-600">{customer.ipAddress || '127.0.0.1'}</span>
-              {customer.serviceUrl && (
-                <span className="font-mono text-blue-600 text-[11px] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  {customer.serviceUrl}
-                </span>
-              )}
             </div>
           </div>
           <div className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -606,26 +692,77 @@ export function FeatureFlagManagementPage() {
           </div>
         </div>
 
-        {/* Section Title & Push Action */}
+        {/* Section Title & Push / Import Action */}
         <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
           <h2 className="text-sm font-black text-slate-800 tracking-tight">
             Feature Flag Overrides for this Customer
           </h2>
-          <button
-            className="btn btn-primary"
-            onClick={handleApply}
-            disabled={applying}
-            style={{
-              background: '#e11d48',
-              borderColor: '#e11d48',
-              boxShadow: '0 2px 8px rgba(225, 29, 72, 0.25)',
-              fontSize: '13px',
-              padding: '6px 18px'
-            }}
-          >
-            <i className={`fa-solid ${applying ? 'fa-spinner fa-spin' : 'fa-paper-plane'} mr-2`}></i>
-            {applying ? 'Applying...' : `Apply to ${customer.name}`}
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleFileSelected}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={handleExportConfig}
+              disabled={exporting}
+              style={{
+                background: '#f8fafc',
+                borderColor: '#cbd5e1',
+                color: '#1e293b',
+                fontSize: '13px',
+                padding: '6px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 600,
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              title="Xuất file snapshot (.json) cấu hình cờ hiện tại"
+            >
+              <i className={`fa-solid ${exporting ? 'fa-spinner fa-spin' : 'fa-file-export'}`} style={{ color: '#059669' }}></i>
+              {exporting ? 'Đang xuất...' : 'Xuất File'}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              style={{
+                background: '#f8fafc',
+                borderColor: '#cbd5e1',
+                color: '#1e293b',
+                fontSize: '13px',
+                padding: '6px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 600,
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+              title="Nhập file snapshot (.json) tải từ Feature Flag Service"
+            >
+              <i className="fa-solid fa-file-import" style={{ color: '#2563eb' }}></i>
+              {importing ? 'Đang nạp...' : 'Import File'}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleApply}
+              disabled={applying}
+              style={{
+                background: '#e11d48',
+                borderColor: '#e11d48',
+                boxShadow: '0 2px 8px rgba(225, 29, 72, 0.25)',
+                fontSize: '13px',
+                padding: '6px 18px'
+              }}
+            >
+              <i className={`fa-solid ${applying ? 'fa-spinner fa-spin' : 'fa-paper-plane'} mr-2`}></i>
+              {applying ? 'Applying...' : `Apply to ${customer.name}`}
+            </button>
+          </div>
         </div>
 
         {/* Flags Table */}
@@ -965,6 +1102,228 @@ export function FeatureFlagManagementPage() {
           </>
         )}
       </aside>
+
+      {/* MODAL PREVIEW IMPORT FILE */}
+      {importModalOpen && importPreview && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '560px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#f8fafc'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}
+                >
+                  <i className="fa-solid fa-file-import"></i>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                    Xác Nhận Nạp File Snapshot Cờ
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                    Kiểm tra thông tin bản snapshot trước khi nạp vào hệ thống
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setImportModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '16px', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '10px',
+                  fontSize: '12px'
+                }}
+              >
+                <div>
+                  <span style={{ color: '#64748b', display: 'block' }}>Tên File:</span>
+                  <strong style={{ color: '#0f172a' }}>{importPreview.fileName}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block' }}>Dung lượng:</span>
+                  <strong style={{ color: '#0f172a' }}>{importPreview.fileSize}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block' }}>Phiên bản Snapshot:</span>
+                  <strong style={{ color: '#0f172a', wordBreak: 'break-all' }}>{importPreview.version}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block' }}>Mã Khách Hàng / Tenant:</span>
+                  <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                    {importPreview.customerCode}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    Danh sách cờ tính năng ({importPreview.featuresCount}):
+                  </span>
+                </div>
+                <div
+                  style={{
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '8px'
+                  }}
+                >
+                  {importPreview.features.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '16px' }}>
+                      File không chứa cờ tính năng nào
+                    </div>
+                  ) : (
+                    importPreview.features.map((f, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 10px',
+                          borderBottom: idx === importPreview.features.length - 1 ? 'none' : '1px solid #f1f5f9',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{f.flagName}</span>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>
+                            {f.strategies?.length || 0} chiến lược
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: f.enabled ? '#dcfce7' : '#f1f5f9',
+                              color: f.enabled ? '#166534' : '#64748b'
+                            }}
+                          >
+                            {f.enabled ? 'BẬT' : 'TẮT'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fef3c7',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '12px',
+                  color: '#92400e',
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <i className="fa-solid fa-triangle-exclamation" style={{ marginTop: '2px' }}></i>
+                <span>
+                  Hành động này sẽ ghi đè cấu hình snapshot cục bộ trong bảng <code>feature_flag_configs</code> của Tracking Order.
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '14px 20px',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                background: '#f8fafc'
+              }}
+            >
+              <button
+                className="btn btn-outline"
+                onClick={() => setImportModalOpen(false)}
+                disabled={importing}
+                style={{ padding: '6px 16px', fontSize: '13px' }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={confirmImport}
+                disabled={importing || importPreview.featuresCount === 0}
+                style={{
+                  background: '#2563eb',
+                  borderColor: '#2563eb',
+                  padding: '6px 18px',
+                  fontSize: '13px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className={`fa-solid ${importing ? 'fa-spinner fa-spin' : 'fa-bolt'}`}></i>
+                {importing ? 'Đang nạp...' : 'Xác Nhận Nạp Snapshot'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TOAST NOTIFICATION */}
       {toast && (

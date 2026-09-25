@@ -98,7 +98,6 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - FEATURE_FLAG_SERVICE_URL=http://feature-flag-service-a:8081
     depends_on:
       - tracking-order-db-a
     restart: on-failure
@@ -167,7 +166,6 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - FEATURE_FLAG_SERVICE_URL=http://feature-flag-service-b:8081
     depends_on:
       - tracking-order-db-b
     restart: on-failure

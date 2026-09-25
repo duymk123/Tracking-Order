@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import com.example.featureflag.exception.FeatureFlagDisabledException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +61,14 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(body);
     }
+
+    // custome exception feature-flag
+    @ExceptionHandler(FeatureFlagDisabledException.class)
+    public ResponseEntity<ErrorRes> handleFeatureFlagDisabledException(FeatureFlagDisabledException exception) {
+        ErrorRes errorResponse = new ErrorRes(exception.getStatus().value(), exception.getMessage());
+        return new ResponseEntity<>(errorResponse, exception.getStatus());
+    }
+
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(  //Exception Valid

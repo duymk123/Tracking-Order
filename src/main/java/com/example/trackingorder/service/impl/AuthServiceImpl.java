@@ -1,5 +1,6 @@
 package com.example.trackingorder.service.impl;
 
+import com.example.featureflag.client.FeatureFlagClient;
 import com.example.trackingorder.common.UserStatusEnum;
 import com.example.trackingorder.config.basicauthconfig.AuthenticationFacade;
 import com.example.trackingorder.config.jwt.JwtTokenProvider;
@@ -11,7 +12,6 @@ import com.example.trackingorder.entity.User;
 import com.example.trackingorder.exception.NotFoundException;
 import com.example.trackingorder.repository.UserRepo;
 import com.example.trackingorder.service.AuthService;
-import com.example.trackingorder.service.FeatureFlagConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -33,8 +33,8 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final UserRepo userRepo;
-    private final FeatureFlagConfigService featureFlagConfigService;
     private final AuthenticationFacade authenticationFacade;
+    private final FeatureFlagClient featureFlagClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,8 +69,11 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .build();
 
-        // Evaluate snapshot of all feature flags for this user session
-        Map<String, Boolean> features = featureFlagConfigService.evaluateAll();
+        /**
+         *
+         *  Evaluate snapshot of all feature flags for this user session
+         */
+        Map<String, Boolean> features = featureFlagClient.evaluateAll();
         log.info("User '{}' logged in successfully with role '{}'. Evaluated {} feature flags.",
                 user.getUsername(), role, features.size());
 
@@ -112,7 +115,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         // Re-evaluate features snapshot on refresh
-        Map<String, Boolean> features = featureFlagConfigService.evaluateAll();
+        Map<String, Boolean> features = featureFlagClient.evaluateAll();
         log.info("Token refreshed for user '{}'. Features re-synced: {}", username, features);
 
         return AuthRes.builder()
@@ -138,7 +141,7 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .build();
 
-        Map<String, Boolean> features = featureFlagConfigService.evaluateAll();
+        Map<String, Boolean> features = featureFlagClient.evaluateAll();
 
         return AuthRes.builder()
                 .user(profileRes)

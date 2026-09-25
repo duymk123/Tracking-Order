@@ -115,6 +115,14 @@
             <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
+        <!--  Feature Flag  -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>feature-flag-lib</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
